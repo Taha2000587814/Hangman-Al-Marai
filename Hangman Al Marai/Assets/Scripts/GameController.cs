@@ -69,28 +69,7 @@ VideoPlayer videoPlayer;
         videoPlayerEN.Stop();
         videoPlayerAR.Stop();
     }
-void Update(){
-        // if(videoPlayer.isPlaying || playVideo){
-        // playVideo = true; 
-        //  if(!videoPlayer.isPlaying){
-        //  Win();
-        //  playVideo = false;
-        //  }
-        //  }
 
-        
-            // Check if the correct video is playing
-            if (language == "ar" && !videoPlayerAR.isPlaying)
-            {
-                PlayVideoBasedOnLanguage();
-            }
-            else if (language == "en" && !videoPlayerEN.isPlaying)
-            {
-                PlayVideoBasedOnLanguage();
-            }
-        
-
-    }
     public void GenerateSlots(bool arabic){
 
 
@@ -280,11 +259,13 @@ return;
         {
             videoPlayerAR.targetTexture = renderTexture;
             videoPlayerAR.Play();
+            videoScreen.SetActive(true); 
         }
         else if (language == "en")
         {
             videoPlayerEN.targetTexture = renderTexture;
             videoPlayerEN.Play();
+            videoScreen.SetActive(true);
         }
     }
 
