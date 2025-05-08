@@ -42,7 +42,7 @@ public class GameController : MonoBehaviour
 [SerializeField] Sprite englishLogo;
 [SerializeField] GameObject videoScreen;
 VideoPlayer videoPlayer;
-    public GameObject WinIMG;
+   
    // public GameObject VPOBj; 
 
     //New 
@@ -52,6 +52,10 @@ VideoPlayer videoPlayer;
     public VideoPlayer videoPlayerEN;
     public VideoPlayer videoPlayerAR;
     public RenderTexture renderTexture;
+    public GameObject WinPanel;
+
+
+
 
     bool playVideo = false;
     // Start is called before the first frame update
@@ -62,12 +66,15 @@ VideoPlayer videoPlayer;
         KidsIdle.SetActive(true);
         KidsHappy.SetActive(false);
         KidsSad.SetActive(false);
-        WinIMG.SetActive(false);
+        WinPanel.SetActive(false);
         // VPOBj.SetActive(false); 
 
         // Ensure both players are stopped initially
         videoPlayerEN.Stop();
         videoPlayerAR.Stop();
+
+        videoPlayer.loopPointReached += OnVideoEnd;
+
     }
 
     public void GenerateSlots(bool arabic){
@@ -196,7 +203,7 @@ return;
     kidsAnimator.Play("Win");
         ActivateKidsHappy();
         winScreen.SetActive(true);
-        WinIMG.SetActive(true); 
+        WinPanel.SetActive(true); 
     
         audioSource.clip = clips[2];
         audioSource.Play();
@@ -271,5 +278,11 @@ return;
         }
     }
 
+    void OnVideoEnd(VideoPlayer vp)
+    {
+        videoScreen.SetActive(false);
+        winScreen.SetActive(true);
+        WinPanel.SetActive(true); 
+    }
 
 }
