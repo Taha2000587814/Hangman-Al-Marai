@@ -43,12 +43,15 @@ public class GameController : MonoBehaviour
 [SerializeField] GameObject videoScreen;
 VideoPlayer videoPlayer;
     public GameObject WinIMG;
-    public GameObject VPOBj; 
+   // public GameObject VPOBj; 
 
     //New 
     public GameObject KidsIdle;
     public GameObject KidsHappy;
     public GameObject KidsSad;
+    public VideoPlayer videoPlayerEN;
+    public VideoPlayer videoPlayerAR;
+    public RenderTexture renderTexture;
 
     bool playVideo = false;
     // Start is called before the first frame update
@@ -60,17 +63,34 @@ VideoPlayer videoPlayer;
         KidsHappy.SetActive(false);
         KidsSad.SetActive(false);
         WinIMG.SetActive(false);
-        VPOBj.SetActive(false); 
+        // VPOBj.SetActive(false); 
+
+        // Ensure both players are stopped initially
+        videoPlayerEN.Stop();
+        videoPlayerAR.Stop();
     }
 void Update(){
-    if(videoPlayer.isPlaying || playVideo){
-        playVideo = true; 
-        if(!videoPlayer.isPlaying){
-            Win();
-            playVideo = false;
-        }
+        // if(videoPlayer.isPlaying || playVideo){
+        // playVideo = true; 
+        //  if(!videoPlayer.isPlaying){
+        //  Win();
+        //  playVideo = false;
+        //  }
+        //  }
+
+        
+            // Check if the correct video is playing
+            if (language == "ar" && !videoPlayerAR.isPlaying)
+            {
+                PlayVideoBasedOnLanguage();
+            }
+            else if (language == "en" && !videoPlayerEN.isPlaying)
+            {
+                PlayVideoBasedOnLanguage();
+            }
+        
+
     }
-}
     public void GenerateSlots(bool arabic){
 
 
@@ -186,10 +206,11 @@ return;
     }
     
     void Win(){
-        VPOBj.SetActive(true); 
+       // VPOBj.SetActive(true); 
         videoScreen.SetActive(false);
-        
-    if (language == "ar")   winScreen.GetComponentInChildren<SpriteRenderer>().sprite = arabicWin;
+        PlayVideoBasedOnLanguage(); // Play the correct video
+
+        if (language == "ar")   winScreen.GetComponentInChildren<SpriteRenderer>().sprite = arabicWin;
     if (language == "en")   winScreen.GetComponentInChildren<SpriteRenderer>().sprite = englishWin;
 
     gameEnded = true;
@@ -250,6 +271,21 @@ return;
         yield return new WaitForSeconds(1f);
         obj.SetActive(false); // Disable selected object
         KidsIdle.SetActive(true); // Re-enable KidsIdle
+    }
+
+
+    void PlayVideoBasedOnLanguage()
+    {
+        if (language == "ar")
+        {
+            videoPlayerAR.targetTexture = renderTexture;
+            videoPlayerAR.Play();
+        }
+        else if (language == "en")
+        {
+            videoPlayerEN.targetTexture = renderTexture;
+            videoPlayerEN.Play();
+        }
     }
 
 }
