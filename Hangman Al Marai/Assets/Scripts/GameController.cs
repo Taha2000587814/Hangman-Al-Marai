@@ -258,15 +258,18 @@ return;
         if (language == "ar")
         {
             videoPlayerAR.targetTexture = renderTexture;
+           // videoPlayerAR.Stop(); // Stop the video first
+            videoPlayerAR.time = 0; // Reset video to the beginning
             videoPlayerAR.Play();
-            videoScreen.SetActive(true); 
         }
         else if (language == "en")
         {
             videoPlayerEN.targetTexture = renderTexture;
+          //  videoPlayerEN.Stop();
+            videoPlayerEN.time = 0; // Reset video to the beginning
             videoPlayerEN.Play();
-            videoScreen.SetActive(true);
         }
     }
+
 
 }

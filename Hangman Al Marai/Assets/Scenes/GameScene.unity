@@ -3621,7 +3621,7 @@ VideoPlayer:
   m_PlayOnAwake: 0
   m_SkipOnDrop: 0
   m_Looping: 0
-  m_WaitForFirstFrame: 0
+  m_WaitForFirstFrame: 1
   m_FrameReadyEventEnabled: 0
   m_VideoShaders: []
 --- !u!4 &1412136503
@@ -4865,11 +4865,11 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1802392112}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: 99edd729334aa617d98ad247b2c214d4, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 7f2cd8a5184f6d04c89c5315f81f6a2d, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 0}
-  m_TargetTexture: {fileID: 8400000, guid: 84ca523a4fb4cb6f5a3e5a40ee9237e5, type: 2}
+  m_TargetTexture: {fileID: 8400000, guid: 236ce03db9c1b524887733905dc0dd8e, type: 2}
   m_TimeReference: 0
   m_TargetMaterialRenderer: {fileID: 0}
   m_TargetMaterialProperty: <noninit>
@@ -4887,7 +4887,7 @@ VideoPlayer:
   m_DirectAudioMutes: 00
   m_ControlledAudioTrackCount: 1
   m_PlayOnAwake: 0
-  m_SkipOnDrop: 1
+  m_SkipOnDrop: 0
   m_Looping: 0
   m_WaitForFirstFrame: 1
   m_FrameReadyEventEnabled: 0
@@ -5213,7 +5213,7 @@ VideoPlayer:
   m_PlayOnAwake: 0
   m_SkipOnDrop: 0
   m_Looping: 0
-  m_WaitForFirstFrame: 0
+  m_WaitForFirstFrame: 1
   m_FrameReadyEventEnabled: 0
   m_VideoShaders: []
 --- !u!4 &1849723816
