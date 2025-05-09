@@ -53,6 +53,8 @@ VideoPlayer videoPlayer;
     public VideoPlayer videoPlayerAR;
     public RenderTexture renderTexture;
     public GameObject WinPanel;
+    public GameObject WinnerSpriteA, WinnerSpriteE;
+    [SerializeField] public GameObject WinSprite;
 
 
 
@@ -75,6 +77,35 @@ VideoPlayer videoPlayer;
 
         videoPlayer.loopPointReached += OnVideoEnd;
 
+       // winSprite = winScreen.GetComponent<SpriteRenderer>();
+        
+
+    }
+
+
+    public void Update()
+    {
+        if (gameEnded && score >= winScore)
+        {
+            if (language == "ar")
+            {
+
+               
+                Debug.Log("assigned arabicwin sprite"); 
+                WinnerSpriteA.SetActive(true);
+
+
+
+
+            }
+            if (language == "en")
+            {
+
+                Debug.Log("assigned englishwin sprite");
+                WinnerSpriteE.SetActive(true);
+
+            }
+        }
     }
 
     public void GenerateSlots(bool arabic){
@@ -196,10 +227,52 @@ return;
         videoScreen.SetActive(false);
         PlayVideoBasedOnLanguage(); // Play the correct video
 
-        if (language == "ar")   winScreen.GetComponentInChildren<SpriteRenderer>().sprite = arabicWin;
-    if (language == "en")   winScreen.GetComponentInChildren<SpriteRenderer>().sprite = englishWin;
+        if (language == "ar") {
 
-    gameEnded = true;
+            //winSprite.sprite = arabicWin;
+            //Debug.Log("assigned arabicwin sprite"); 
+          WinnerSpriteA.SetActive(true);
+           
+
+
+
+        }
+        if (language == "en")
+        {
+
+          //  winSprite.sprite = englishWin;
+            //Debug.Log("assigned englishwin sprite");
+            
+             WinnerSpriteE.SetActive(true);
+
+        }
+
+
+
+        if (WinSprite == null)
+        {
+            Debug.LogError("WinSprite GameObject is not assigned!");
+            return; // Prevent errors if it's missing
+        }
+
+        // Get the SpriteRenderer component inside WinSprite
+        SpriteRenderer winSpriteRenderer = WinSprite.GetComponent<SpriteRenderer>();
+
+        if (winSpriteRenderer == null)
+        {
+            Debug.LogError("WinSprite does not have a SpriteRenderer component!");
+            return;
+        }
+
+        // Assign the correct sprite based on the language
+        winSpriteRenderer.sprite = (language == "ar") ? arabicWin : englishWin;
+        Debug.Log("Win sprite successfully assigned!");
+
+        // Activate WinSprite to make it visible
+        WinSprite.SetActive(true);
+        WinPanel.SetActive(true);
+
+        gameEnded = true;
     kidsAnimator.Play("Win");
         ActivateKidsHappy();
         winScreen.SetActive(true);
