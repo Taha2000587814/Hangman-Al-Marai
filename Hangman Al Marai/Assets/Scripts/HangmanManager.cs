@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using UnityEngine.Video; 
 
 public class HangmanManager : MonoBehaviour
 {
@@ -10,10 +12,19 @@ public class HangmanManager : MonoBehaviour
     public TMP_Text[] letterSlots; // Array to hold TMP objects for each letter
     public int maxAttempts = 6; // Max incorrect guesses
 
+    public string SceneName;
+
+    public VideoPlayer videoPlayerEN; 
+    public GameObject videoScreenEN;
+
+
+
     // Words to guess
     private string fullSentence = "milkeverydayisthesmartway"; // Combined sentence (no spaces)
     private char[] displayedWord;
     private int incorrectAttempts = 0;
+
+    public GameObject GameOverPanel, WinPanel; 
 
     // Milk Meter Progression
     public Animator pourAnimator; // Milk pouring animation
@@ -34,6 +45,8 @@ public class HangmanManager : MonoBehaviour
     public GameObject cowAngry;
     public AudioSource incorrectAudio;
 
+    public GameObject StartingScreen, HangmanEN, HangmanAR; 
+
     // Keyboard Input
     public GameObject[] keyboardButtons; // Array of keyboard buttons (A-Z)
 
@@ -41,37 +54,35 @@ public class HangmanManager : MonoBehaviour
     {
         AssignLetterValues();
         InitializeGame();
+        StartingScreen.SetActive(true);
+        HangmanEN.SetActive(false); 
+
+        if (videoPlayerEN != null)
+        {
+            videoPlayerEN.loopPointReached += OnVideoEnd; // Subscribe to event when video ends
+        }
     }
+
+    Dictionary<string, Button> keyboardMap = new Dictionary<string, Button>();
 
     void AssignLetterValues()
     {
-        if (keyboardButtons == null || keyboardButtons.Length < 26) // Ensure 26 buttons exist
+        foreach (GameObject buttonObject in keyboardButtons)
         {
-            Debug.LogError("ERROR: Keyboard buttons array is either null or missing elements! Assign all buttons in Unity.");
-            return;
+            Button btn = buttonObject.GetComponent<Button>();
+            string letter = buttonObject.name.ToUpper(); // Ensure letter matches keyboard input
+
+            if (!keyboardMap.ContainsKey(letter))
+            {
+                keyboardMap.Add(letter, btn);
+                btn.onClick.AddListener(() => OnLetterPressed(letter));
+            }
         }
 
-        char[] letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
-
-        for (int i = 0; i < keyboardButtons.Length; i++)
-        {
-            if (i >= letters.Length) // Prevent index out of range
-            {
-                Debug.LogError($"ERROR: Button index {i} is out of range for letters array.");
-                break; // Stop loop to avoid crashes
-            }
-
-            if (keyboardButtons[i] == null)
-            {
-                Debug.LogError($"ERROR: Missing button at index {i}! Assign it in Inspector.");
-                continue;
-            }
-
-            keyboardButtons[i].GetComponent<Button>().onClick.AddListener(() => OnLetterPressed(letters[i].ToString()));
-
-            Debug.Log($"Assigned button {i} to letter: {letters[i]}");
-        }
+        Debug.Log("Keyboard setup complete with Dictionary mapping.");
     }
+
+
 
 
     void InitializeGame()
@@ -106,22 +117,26 @@ public class HangmanManager : MonoBehaviour
 
         for (int i = 0; i < displayedWord.Length; i++)
         {
+            // Ensure only hidden spaces are replaced
             if (fullSentence[i] == guess && displayedWord[i] == ' ')
             {
-                displayedWord[i] = guess; // Reveal hidden letter
+                displayedWord[i] = guess; // Reveal the letter
                 correctGuess = true;
+                Debug.Log($" Correct guess! {letter} revealed at index {i}.");
             }
         }
+
+        UpdateWordDisplay(); // Refresh UI after revealing letters
 
         if (!correctGuess)
         {
             incorrectAttempts++;
-            StartCoroutine(IncorrectReaction());
+            Debug.Log($" Incorrect guess: {letter} is not in the sentence.");
 
+            StartCoroutine(IncorrectReaction());
             if (incorrectAttempts >= maxAttempts)
             {
                 EndGame(false);
-                return;
             }
         }
         else
@@ -129,9 +144,10 @@ public class HangmanManager : MonoBehaviour
             OnCorrectLetterGuessed();
         }
 
-        UpdateWordDisplay();
-        CheckWinCondition();
+        CheckWinCondition(); // Verify if player has won
     }
+
+
 
     void UpdateWordDisplay()
     {
@@ -194,6 +210,7 @@ public class HangmanManager : MonoBehaviour
         else
         {
             Debug.Log("Game Over! Retry?");
+            GameOverPanel.SetActive(true); 
         }
     }
 
@@ -215,6 +232,7 @@ public class HangmanManager : MonoBehaviour
         cowNormal.SetActive(true);
         happyKids.SetActive(false);
         idleKids.SetActive(true);
+        WinPanel.SetActive(true);
     }
 
     IEnumerator IncorrectReaction()
@@ -228,5 +246,32 @@ public class HangmanManager : MonoBehaviour
 
         sadKids.SetActive(false);
         cowAngry.SetActive(false);
+    } 
+
+    public void Retry()
+    {
+        SceneManager.LoadSceneAsync(SceneName);
+        Debug.Log("loading Scene " + SceneName);
+        StartingScreen.SetActive(true);
+        HangmanEN.SetActive(false);
+
+    }
+
+
+
+    public void PlayVideo()
+    {
+        if (videoPlayerEN != null && videoScreenEN != null)
+        {
+            videoScreenEN.SetActive(true); // Enable video screen
+            WinPanel.SetActive(false);//hde winner panel
+            videoPlayerEN.Play(); // Start playing video
+        }
+    }
+
+    void OnVideoEnd(VideoPlayer vp)
+    {
+        videoScreenEN.SetActive(false); // Disable video screen when video ends
+        WinPanel.SetActive(true); // Enable winner panel
     }
 }
