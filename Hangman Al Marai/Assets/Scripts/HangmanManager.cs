@@ -14,6 +14,8 @@ public class HangmanManager : MonoBehaviour
 
     public string SceneName;
 
+    public AudioSource milkFillAudio; 
+
     public VideoPlayer videoPlayerEN; 
     public GameObject videoScreenEN;
 
@@ -70,7 +72,7 @@ public class HangmanManager : MonoBehaviour
         foreach (GameObject buttonObject in keyboardButtons)
         {
             Button btn = buttonObject.GetComponent<Button>();
-            string letter = buttonObject.name.ToUpper(); // Ensure letter matches keyboard input
+            string letter = buttonObject.name.ToLower(); // Ensure letter matches keyboard input
 
             if (!keyboardMap.ContainsKey(letter))
             {
@@ -110,30 +112,48 @@ public class HangmanManager : MonoBehaviour
 
     public void OnLetterPressed(string letter)
     {
-        Debug.Log("Pressed letter: " + letter); // Debugging key press detection
+        string lowercaseLetter = letter.ToLower();
+        Debug.Log($"Pressed letter: {lowercaseLetter}");
 
-        char guess = letter[0];
+        char guess = lowercaseLetter[0];
         bool correctGuess = false;
 
-        for (int i = 0; i < displayedWord.Length; i++)
+        Button pressedButton = keyboardMap.ContainsKey(lowercaseLetter) ? keyboardMap[lowercaseLetter] : null;
+
+        if (pressedButton == null)
         {
-            // Ensure only hidden spaces are replaced
+            Debug.LogError($"ERROR: No button found for '{lowercaseLetter}'!");
+            return;
+        }
+
+        for (int i = 0; i < fullSentence.Length; i++)
+        {
             if (fullSentence[i] == guess && displayedWord[i] == ' ')
             {
-                displayedWord[i] = guess; // Reveal the letter
+                displayedWord[i] = guess;
                 correctGuess = true;
-                Debug.Log($" Correct guess! {letter} revealed at index {i}.");
+                Debug.Log($"? Correct guess! '{lowercaseLetter}' revealed at index {i}.");
             }
         }
 
-        UpdateWordDisplay(); // Refresh UI after revealing letters
+        UpdateWordDisplay();
 
         if (!correctGuess)
         {
             incorrectAttempts++;
-            Debug.Log($" Incorrect guess: {letter} is not in the sentence.");
+            Debug.Log($"? Incorrect guess: '{lowercaseLetter}' is not in the sentence.");
 
-            StartCoroutine(IncorrectReaction());
+            cowAngry.SetActive(true);
+            sadKids.SetActive(true);
+            cowHappy.SetActive(false);
+            happyKids.SetActive(false);
+            idleKids.SetActive(false);
+
+            pressedButton.GetComponent<Image>().color = Color.red; // ?? Button turns red
+            incorrectAudio.PlayOneShot(incorrectAudio.clip); // ? Allows overlapping sounds
+
+            StartCoroutine(ResetReaction());
+
             if (incorrectAttempts >= maxAttempts)
             {
                 EndGame(false);
@@ -141,11 +161,39 @@ public class HangmanManager : MonoBehaviour
         }
         else
         {
+            cowHappy.SetActive(true);
+            happyKids.SetActive(true);
+            cowAngry.SetActive(false);
+            sadKids.SetActive(false);
+            idleKids.SetActive(false);
+
+            pressedButton.GetComponent<Image>().color = Color.green; // ?? Button turns green
+            correctAudio.PlayOneShot(correctAudio.clip); // ? Allows overlapping sounds
+
+            StartCoroutine(ResetReaction());
             OnCorrectLetterGuessed();
         }
 
-        CheckWinCondition(); // Verify if player has won
+        CheckWinCondition();
     }
+
+
+
+    IEnumerator ResetReaction()
+    {
+        yield return new WaitForSeconds(1);
+
+        cowAngry.SetActive(false);
+        cowHappy.SetActive(false);
+        cowNormal.SetActive(true);
+
+        sadKids.SetActive(false);
+        happyKids.SetActive(false);
+        idleKids.SetActive(true);
+
+        Debug.Log("?? Reaction reset: Back to idle state.");
+    }
+
 
 
 
@@ -184,9 +232,15 @@ public class HangmanManager : MonoBehaviour
 
     IEnumerator HandleMilkMeterProgression()
     {
-        pourAnimator.SetTrigger("PourMilk");
+        pourAnimator.SetTrigger("pour"); // Start milk pouring animation
 
-        yield return new WaitForSeconds(1.5f);
+        if (milkFillAudio != null) // Check if audio source is assigned
+        {
+            milkFillAudio.Play(); // Play pouring sound
+            Debug.Log("Milk pouring sound played!");
+        }
+
+        yield return new WaitForSeconds(1.5f); // Wait for animation to complete
 
         if (currentMilkState < milkMeters.Length)
         {
@@ -195,24 +249,28 @@ public class HangmanManager : MonoBehaviour
                 milkMeter.SetActive(false);
             }
 
-            milkMeters[currentMilkState].SetActive(true);
+            milkMeters[currentMilkState].SetActive(true); // Update milk level
             currentMilkState++;
         }
     }
+
 
     void EndGame(bool won)
     {
         if (won)
         {
             Debug.Log("You Win! Milk meter is full!");
-            StartCoroutine(WinReactionSequence());
+            StartCoroutine(WinReactionSequence()); // Show reaction first
+            StartCoroutine(EnableWinPanelAfterDelay()); // Delay WinPanel activation
         }
         else
         {
             Debug.Log("Game Over! Retry?");
-            GameOverPanel.SetActive(true); 
+            GameOverPanel.SetActive(true);
         }
     }
+
+
 
     IEnumerator WinReactionSequence()
     {
@@ -271,7 +329,15 @@ public class HangmanManager : MonoBehaviour
 
     void OnVideoEnd(VideoPlayer vp)
     {
-        videoScreenEN.SetActive(false); // Disable video screen when video ends
-        WinPanel.SetActive(true); // Enable winner panel
+        Debug.Log("Video finished, enabling WinPanel...");
+        videoScreenEN.SetActive(false);
+        WinPanel.SetActive(true);
     }
+
+    IEnumerator EnableWinPanelAfterDelay()
+    {
+        yield return new WaitForSeconds(2);
+        WinPanel.SetActive(true);
+    }
+
 }
