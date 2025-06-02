@@ -4,7 +4,8 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using UnityEngine.Video; 
+using UnityEngine.Video;
+using System.Linq; 
 
 public class HangmanManager : MonoBehaviour
 {
@@ -18,6 +19,7 @@ public class HangmanManager : MonoBehaviour
 
     public VideoPlayer videoPlayerEN; 
     public GameObject videoScreenEN;
+    public int hiddenLetterCount = 7; // Adjustable from Unity Inspector
 
 
 
@@ -56,14 +58,11 @@ public class HangmanManager : MonoBehaviour
     {
         AssignLetterValues();
         InitializeGame();
+        AdjustMilkMeterCount(); // Ensure milk meters match hidden letters
         StartingScreen.SetActive(true);
-        HangmanEN.SetActive(false); 
-
-        if (videoPlayerEN != null)
-        {
-            videoPlayerEN.loopPointReached += OnVideoEnd; // Subscribe to event when video ends
-        }
+        HangmanEN.SetActive(false);
     }
+
 
     Dictionary<string, Button> keyboardMap = new Dictionary<string, Button>();
 
@@ -90,9 +89,10 @@ public class HangmanManager : MonoBehaviour
     void InitializeGame()
     {
         displayedWord = fullSentence.ToCharArray();
-        HideRandomLetters(displayedWord, 7); // Hide 7 letters in the sentence
+        HideRandomLetters(displayedWord, hiddenLetterCount); // Use adjustable value
         UpdateWordDisplay();
     }
+
 
     void HideRandomLetters(char[] displayedWord, int numToHide)
     {
@@ -209,50 +209,89 @@ public class HangmanManager : MonoBehaviour
 
     void CheckWinCondition()
     {
-        if (new string(displayedWord) == fullSentence)
+        int remainingHiddenLetters = new string(displayedWord).Count(c => c == ' ');
+
+        Debug.Log($"Remaining hidden letters: {remainingHiddenLetters}");
+
+        // Only trigger win condition when ALL hidden letters are revealed
+        if (remainingHiddenLetters == 0)
         {
-            EndGame(true);
+            Debug.Log("All hidden letters revealed! Player wins.");
+            HandleWin();
         }
     }
+
+
 
     public void OnCorrectLetterGuessed()
     {
         correctGuesses++;
 
-        if (correctGuesses <= totalMissingLetters)
+        Debug.Log($"Correct letter guessed! Current: {correctGuesses} / Total Hidden: {hiddenLetterCount}");
+
+        // Ensure pouring animation starts using isPouring
+        if (pourAnimator != null)
+        {
+            Debug.Log("Setting isPouring = true");
+            pourAnimator.SetBool("isPouring", true);
+            Invoke("StopPouring", 1.5f); // Stop animation after 1.5 seconds
+        }
+        else
+        {
+            Debug.LogError("ERROR: pourAnimator is NULL!");
+        }
+
+        int progressionStep = Mathf.Max(1, hiddenLetterCount / milkMeters.Length);
+
+        if (correctGuesses % progressionStep == 0 && currentMilkState < milkMeters.Length)
         {
             StartCoroutine(HandleMilkMeterProgression());
         }
 
-        if (correctGuesses == totalMissingLetters)
+        if (!new string(displayedWord).Contains(" "))
         {
-            EndGame(true);
+            Debug.Log("All hidden letters revealed! Player wins.");
+            HandleWin();
         }
     }
 
+    // Stop pouring after animation duration
+    void StopPouring()
+    {
+        if (pourAnimator != null)
+        {
+            Debug.Log("Setting isPouring = false");
+            pourAnimator.SetBool("isPouring", false);
+        }
+    }
+
+
+
     IEnumerator HandleMilkMeterProgression()
     {
-        pourAnimator.SetTrigger("pour"); // Start milk pouring animation
-
-        if (milkFillAudio != null) // Check if audio source is assigned
+        if (milkFillAudio != null)
         {
-            milkFillAudio.Play(); // Play pouring sound
+            milkFillAudio.Play();
             Debug.Log("Milk pouring sound played!");
         }
 
-        yield return new WaitForSeconds(1.5f); // Wait for animation to complete
+        yield return new WaitForSeconds(1.5f);
 
-        if (currentMilkState < milkMeters.Length)
+        if (currentMilkState < milkMeters.Length - 1)
         {
+            Debug.Log($"Milk state progressing: {currentMilkState} ? {currentMilkState + 1}");
+
             foreach (GameObject milkMeter in milkMeters)
             {
                 milkMeter.SetActive(false);
             }
 
-            milkMeters[currentMilkState].SetActive(true); // Update milk level
-            currentMilkState++;
+            currentMilkState++; // Increment milk state
+            milkMeters[currentMilkState].SetActive(true);
         }
     }
+
+
 
 
     void EndGame(bool won)
@@ -261,7 +300,7 @@ public class HangmanManager : MonoBehaviour
         {
             Debug.Log("You Win! Milk meter is full!");
             StartCoroutine(WinReactionSequence()); // Show reaction first
-            StartCoroutine(EnableWinPanelAfterDelay()); // Delay WinPanel activation
+            
         }
         else
         {
@@ -282,7 +321,7 @@ public class HangmanManager : MonoBehaviour
         happyKids.SetActive(true);
         idleKids.SetActive(false);
 
-        pourAnimator.SetTrigger("WinAnimation");
+    
 
         yield return new WaitForSeconds(1.5f);
 
@@ -290,7 +329,11 @@ public class HangmanManager : MonoBehaviour
         cowNormal.SetActive(true);
         happyKids.SetActive(false);
         idleKids.SetActive(true);
-        WinPanel.SetActive(true);
+
+       
+
+       
+
     }
 
     IEnumerator IncorrectReaction()
@@ -316,28 +359,51 @@ public class HangmanManager : MonoBehaviour
     }
 
 
-
-    public void PlayVideo()
+    public void HandleWin()
     {
-        if (videoPlayerEN != null && videoScreenEN != null)
-        {
-            videoScreenEN.SetActive(true); // Enable video screen
-            WinPanel.SetActive(false);//hde winner panel
-            videoPlayerEN.Play(); // Start playing video
-        }
+        Debug.Log("Player won! Activating video...");
+
+        videoScreenEN.SetActive(true); // Show video screen
+        videoPlayerEN.gameObject.SetActive(true); // Enable VideoPlayer
+        videoPlayerEN.Play(); // Start playback
+
+        StartCoroutine(ActivateWinPanelAfterDelay());
     }
 
-    void OnVideoEnd(VideoPlayer vp)
+    IEnumerator ActivateWinPanelAfterDelay()
     {
-        Debug.Log("Video finished, enabling WinPanel...");
+        yield return new WaitForSeconds(18f); // Adjust this delay as needed
+
+        Debug.Log("Activating win panel...");
+        WinPanel.SetActive(true); // Show win panel
+
+        // Hide video elements after win panel appears
+        videoPlayerEN.gameObject.SetActive(false);
         videoScreenEN.SetActive(false);
-        WinPanel.SetActive(true);
     }
 
-    IEnumerator EnableWinPanelAfterDelay()
+
+    void AdjustMilkMeterCount()
     {
-        yield return new WaitForSeconds(2);
-        WinPanel.SetActive(true);
+        int currentCount = milkMeters.Length;
+
+        if (currentCount < hiddenLetterCount)
+        {
+            Debug.Log($"Milk meter count ({currentCount}) is lower than hidden letters ({hiddenLetterCount}). Adjusting...");
+
+            List<GameObject> adjustedMilkMeters = new List<GameObject>(milkMeters);
+
+            GameObject lastMilkMeter = milkMeters[currentCount - 1]; // Last assigned milk object
+
+            while (adjustedMilkMeters.Count < hiddenLetterCount)
+            {
+                GameObject duplicate = Instantiate(lastMilkMeter, lastMilkMeter.transform.parent);
+                adjustedMilkMeters.Add(duplicate);
+            }
+
+            milkMeters = adjustedMilkMeters.ToArray(); // Update array with new elements
+            Debug.Log($"Milk meters successfully adjusted to {milkMeters.Length}.");
+        }
     }
 
 }
