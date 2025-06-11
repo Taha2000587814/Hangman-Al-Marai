@@ -24,7 +24,7 @@ public class HangmanManager : MonoBehaviour
 
 
     // Words to guess
-    private string fullSentence = "milkeverydayisthesmartway"; // Combined sentence (no spaces)
+    private string fullSentence = "MilkEverydayIsTheSmartWay"; // Combined sentence (no spaces)
     private char[] displayedWord;
     private int incorrectAttempts = 0;
 
