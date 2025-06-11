@@ -5,7 +5,8 @@ using TMPro;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.Video;
-using System.Linq; 
+using System.Linq;
+using ArabicSupport;
 
 public class HangmanManager : MonoBehaviour
 {
@@ -58,6 +59,7 @@ public class HangmanManager : MonoBehaviour
     {
         AssignLetterValues();
         InitializeGame();
+        InitializeArabicGame(); 
         AdjustMilkMeterCount(); // Ensure milk meters match hidden letters
         StartingScreen.SetActive(true);
         HangmanEN.SetActive(false);
@@ -404,6 +406,135 @@ public class HangmanManager : MonoBehaviour
             milkMeters = adjustedMilkMeters.ToArray(); // Update array with new elements
             Debug.Log($"Milk meters successfully adjusted to {milkMeters.Length}.");
         }
+    }
+
+
+
+
+    // Arabic Section
+
+    public string arabicSentence = "??? ?????? ?? ??????"; // Arabic sentence
+    public bool isArabicMode = false; // Tracks the current language mode
+    public GameObject[] arabicKeyboardButtons; // Arabic keyboard buttons array
+
+
+    public GameObject arabicKeyboard; // Arabic keyboard UI
+    public TMP_Text[] arabicLetterSlots; // Arabic text slots
+
+    void ToggleLanguageMode(bool arabic)
+    {
+        isArabicMode = arabic;
+        HangmanAR.SetActive(arabic);
+        HangmanEN.SetActive(!arabic);
+
+        arabicKeyboard.SetActive(arabic);
+        foreach (GameObject button in keyboardButtons)
+        {
+            button.SetActive(!arabic); // Hide English keyboard if Arabic is active
+        }
+
+        InitializeGame(); // Reload with new language
+    }
+
+    void InitializeArabicGame()
+    {
+        displayedWord = arabicSentence.ToCharArray();
+        HideRandomLetters(displayedWord, hiddenLetterCount);
+        UpdateArabicDisplay();
+    }
+
+    void UpdateArabicDisplay()
+    {
+        string formattedSentence = ArabicFixer.Fix(new string(displayedWord)); // Fix full sentence
+        for (int i = 0; i < arabicLetterSlots.Length; i++)
+        {
+            arabicLetterSlots[i].text = formattedSentence[i].ToString();
+        }
+
+        Debug.Log($"Updated Arabic Word Display: {formattedSentence}");
+    }
+
+
+    public void SelectArabic()
+    {
+        ToggleLanguageMode(true);
+    }
+
+    public void SelectEnglish()
+    {
+        ToggleLanguageMode(false);
+    }
+
+    Dictionary<string, Button> arabicKeyboardMap = new Dictionary<string, Button>();
+
+    void AssignArabicLetterValues()
+    {
+        foreach (GameObject buttonObject in arabicKeyboardButtons) // Arabic keyboard objects
+        {
+            Button btn = buttonObject.GetComponent<Button>();
+            string letter = buttonObject.name; // Arabic letters should match button names exactly
+
+            if (!arabicKeyboardMap.ContainsKey(letter))
+            {
+                arabicKeyboardMap.Add(letter, btn);
+                btn.onClick.AddListener(() => OnArabicLetterPressed(letter)); // Arabic input handling
+            }
+        }
+
+        Debug.Log("Arabic keyboard setup complete with Dictionary mapping.");
+    }
+
+
+    public void OnArabicLetterPressed(string letter)
+    {
+        Debug.Log($"Pressed Arabic letter: {letter}");
+
+        char guess = letter[0];
+        bool correctGuess = false;
+
+        Button pressedButton = arabicKeyboardMap.ContainsKey(letter) ? arabicKeyboardMap[letter] : null;
+
+        if (pressedButton == null)
+        {
+            Debug.LogError($"ERROR: No button found for '{letter}'!");
+            return;
+        }
+
+        for (int i = 0; i < arabicSentence.Length; i++)
+        {
+            if (arabicSentence[i] == guess && displayedWord[i] == ' ')
+            {
+                displayedWord[i] = guess;
+                correctGuess = true;
+                Debug.Log($"? Correct Arabic guess! '{letter}' revealed at index {i}.");
+            }
+        }
+
+        UpdateArabicDisplay();
+
+        if (!correctGuess)
+        {
+            incorrectAttempts++;
+            Debug.Log($"? Incorrect Arabic guess: '{letter}' is not in the sentence.");
+            pressedButton.GetComponent<Image>().color = Color.red;
+            incorrectAudio.PlayOneShot(incorrectAudio.clip);
+
+            StartCoroutine(ResetReaction());
+
+            if (incorrectAttempts >= maxAttempts)
+            {
+                EndGame(false);
+            }
+        }
+        else
+        {
+            pressedButton.GetComponent<Image>().color = Color.green;
+            correctAudio.PlayOneShot(correctAudio.clip);
+            StartCoroutine(ResetReaction());
+            OnCorrectLetterGuessed();
+        }
+
+        CheckWinCondition();
     }
 
 }
