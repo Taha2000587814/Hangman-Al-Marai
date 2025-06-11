@@ -445,13 +445,26 @@ public class HangmanManager : MonoBehaviour
 
     void UpdateArabicDisplay()
     {
-        string formattedSentence = ArabicFixer.Fix(new string(displayedWord)); // Fix full sentence
-        for (int i = 0; i < arabicLetterSlots.Length; i++)
+        if (arabicLetterSlots == null || arabicLetterSlots.Length == 0)
+        {
+            Debug.LogError("ERROR: Arabic letter slots are not assigned!");
+            return;
+        }
+
+        if (displayedWord == null || displayedWord.Length == 0)
+        {
+            Debug.LogError("ERROR: displayedWord is null or empty!");
+            return;
+        }
+
+        string formattedSentence = ArabicFixer.Fix(new string(displayedWord), true, true); // Ensure correct Arabic letter connection
+
+        Debug.Log($"Updated Arabic Word Display (Fixed): {formattedSentence}");
+
+        for (int i = 0; i < arabicLetterSlots.Length && i < formattedSentence.Length; i++)
         {
             arabicLetterSlots[i].text = formattedSentence[i].ToString();
         }
-
-        Debug.Log($"Updated Arabic Word Display: {formattedSentence}");
     }
 
 
@@ -516,8 +529,16 @@ public class HangmanManager : MonoBehaviour
         {
             incorrectAttempts++;
             Debug.Log($"? Incorrect Arabic guess: '{letter}' is not in the sentence.");
+
+            // Match English incorrect effects
             pressedButton.GetComponent<Image>().color = Color.red;
             incorrectAudio.PlayOneShot(incorrectAudio.clip);
+
+            cowAngry.SetActive(true);
+            sadKids.SetActive(true);
+            cowHappy.SetActive(false);
+            happyKids.SetActive(false);
+            idleKids.SetActive(false);
 
             StartCoroutine(ResetReaction());
 
@@ -528,13 +549,22 @@ public class HangmanManager : MonoBehaviour
         }
         else
         {
+            // Match English correct effects
             pressedButton.GetComponent<Image>().color = Color.green;
             correctAudio.PlayOneShot(correctAudio.clip);
+
+            cowHappy.SetActive(true);
+            happyKids.SetActive(true);
+            cowAngry.SetActive(false);
+            sadKids.SetActive(false);
+            idleKids.SetActive(false);
+
             StartCoroutine(ResetReaction());
             OnCorrectLetterGuessed();
         }
 
         CheckWinCondition();
     }
+
 
 }
