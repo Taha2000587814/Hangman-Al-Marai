@@ -57,12 +57,10 @@ public class HangmanManager : MonoBehaviour
 
     void Start()
     {
-        AssignLetterValues();
-        InitializeGame();
-        InitializeArabicGame(); 
         AdjustMilkMeterCount(); // Ensure milk meters match hidden letters
         StartingScreen.SetActive(true);
         HangmanEN.SetActive(false);
+        HangmanAR.SetActive(false);
     }
 
 
@@ -73,26 +71,40 @@ public class HangmanManager : MonoBehaviour
         foreach (GameObject buttonObject in keyboardButtons)
         {
             Button btn = buttonObject.GetComponent<Button>();
-            string letter = buttonObject.name.ToLower(); // Ensure letter matches keyboard input
+
+            if (btn == null)
+            {
+                Debug.LogError($"Button missing on {buttonObject.name}");
+                continue; // Skip this button
+            }
+
+            string letter = buttonObject.name.ToLower(); // Ensure name matches correctly
 
             if (!keyboardMap.ContainsKey(letter))
             {
                 keyboardMap.Add(letter, btn);
+                btn.onClick.RemoveAllListeners(); // Avoid duplicate listeners
                 btn.onClick.AddListener(() => OnLetterPressed(letter));
             }
         }
 
-        Debug.Log("Keyboard setup complete with Dictionary mapping.");
+        Debug.Log("Keyboard setup complete.");
     }
 
 
 
 
-    void InitializeGame()
+
+    public void InitializeGame()
     {
         displayedWord = fullSentence.ToCharArray();
         HideRandomLetters(displayedWord, hiddenLetterCount); // Use adjustable value
         UpdateWordDisplay();
+        AssignLetterValues();
+        StartingScreen.SetActive(false);
+        HangmanAR.SetActive(false);
+        HangmanEN.SetActive(true);
+        ValidateKeyboardInteraction(); 
     }
 
 
@@ -413,89 +425,87 @@ public class HangmanManager : MonoBehaviour
 
     // Arabic Section
 
-    public string arabicSentence = "??? ?????? ?? ??????"; // Arabic sentence
+   public string arabicSentence = "??? ?????? ?? ??????"; // Arabic sentence
     public bool isArabicMode = false; // Tracks the current language mode
     public GameObject[] arabicKeyboardButtons; // Arabic keyboard buttons array
 
+    public TMP_Text[] arabicSentenceHolders; // Array for sentence segments
+    public string[] arabicSentenceParts = { "???", "??????", "??", "??????" }; // Four sentence parts
+    private char[][] displayedWords; // Multi-array for hiding letters
 
-    public GameObject arabicKeyboard; // Arabic keyboard UI
+
+   
     public TMP_Text[] arabicLetterSlots; // Arabic text slots
 
-    void ToggleLanguageMode(bool arabic)
-    {
-        isArabicMode = arabic;
-        HangmanAR.SetActive(arabic);
-        HangmanEN.SetActive(!arabic);
 
-        arabicKeyboard.SetActive(arabic);
-        foreach (GameObject button in keyboardButtons)
+
+    public void InitializeArabicGame()
+    {
+        displayedWords = new char[arabicSentenceParts.Length][];
+
+        int lettersToHidePerPart = hiddenLetterCount / arabicSentenceParts.Length; // Ensure consistency
+
+        for (int i = 0; i < arabicSentenceParts.Length; i++)
         {
-            button.SetActive(!arabic); // Hide English keyboard if Arabic is active
+            displayedWords[i] = arabicSentenceParts[i].ToCharArray();
+            HideRandomLetters(displayedWords[i], lettersToHidePerPart); // Use the same logic as English mode
         }
 
-        InitializeGame(); // Reload with new language
+        UpdateArabicDisplay();
+        AssignArabicLetterValues();
+        ValidateKeyboardInteraction(); // Ensure all Arabic keyboard buttons are interactable
+
+        StartingScreen.SetActive(false);
+        HangmanAR.SetActive(true);
+        HangmanEN.SetActive(false);
     }
 
-    void InitializeArabicGame()
-    {
-        displayedWord = arabicSentence.ToCharArray();
-        HideRandomLetters(displayedWord, hiddenLetterCount);
-        UpdateArabicDisplay();
-    }
+
 
     void UpdateArabicDisplay()
     {
-        if (arabicLetterSlots == null || arabicLetterSlots.Length == 0)
+        for (int i = 0; i < arabicSentenceHolders.Length; i++)
         {
-            Debug.LogError("ERROR: Arabic letter slots are not assigned!");
-            return;
+            if (i < displayedWords.Length)
+            {
+                arabicSentenceHolders[i].text = ArabicFixer.Fix(new string(displayedWords[i]), true, true); // Fix RTL & spacing
+            }
         }
 
-        if (displayedWord == null || displayedWord.Length == 0)
-        {
-            Debug.LogError("ERROR: displayedWord is null or empty!");
-            return;
-        }
-
-        string formattedSentence = ArabicFixer.Fix(new string(displayedWord), true, true); // Ensure correct Arabic letter connection
-
-        Debug.Log($"Updated Arabic Word Display (Fixed): {formattedSentence}");
-
-        for (int i = 0; i < arabicLetterSlots.Length && i < formattedSentence.Length; i++)
-        {
-            arabicLetterSlots[i].text = formattedSentence[i].ToString();
-        }
+        Debug.Log($"? Arabic Sentence Display (RTL Fixed): {string.Join(" ", arabicSentenceParts)}");
     }
 
-
-    public void SelectArabic()
-    {
-        ToggleLanguageMode(true);
-    }
-
-    public void SelectEnglish()
-    {
-        ToggleLanguageMode(false);
-    }
 
     Dictionary<string, Button> arabicKeyboardMap = new Dictionary<string, Button>();
 
+    // Arabic Alphabet Mapping (Ensure Order)
+    string[] arabicAlphabet = { "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
+                            "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "??", "?", "?" };
+
     void AssignArabicLetterValues()
     {
-        foreach (GameObject buttonObject in arabicKeyboardButtons) // Arabic keyboard objects
+        if (arabicKeyboardButtons.Length != arabicAlphabet.Length)
         {
-            Button btn = buttonObject.GetComponent<Button>();
-            string letter = buttonObject.name; // Arabic letters should match button names exactly
+            Debug.LogError("ERROR: Arabic keyboard buttons count doesn't match alphabet count!");
+            return;
+        }
+
+        for (int i = 0; i < arabicKeyboardButtons.Length; i++)
+        {
+            Button btn = arabicKeyboardButtons[i].GetComponent<Button>();
+            string letter = arabicAlphabet[i]; // Assign letters in correct order
 
             if (!arabicKeyboardMap.ContainsKey(letter))
             {
                 arabicKeyboardMap.Add(letter, btn);
-                btn.onClick.AddListener(() => OnArabicLetterPressed(letter)); // Arabic input handling
+                btn.onClick.RemoveAllListeners(); // Avoid duplicate listeners
+                btn.onClick.AddListener(() => OnArabicLetterPressed(letter));
             }
         }
 
-        Debug.Log("Arabic keyboard setup complete with Dictionary mapping.");
+        Debug.Log("? Arabic keyboard mapping complete with correct alphabetical order.");
     }
+
 
 
     public void OnArabicLetterPressed(string letter)
@@ -561,9 +571,41 @@ public class HangmanManager : MonoBehaviour
 
             StartCoroutine(ResetReaction());
             OnCorrectLetterGuessed();
+            CheckWinCondition();
         }
 
-        CheckWinCondition();
+        
+    }
+
+
+
+    //Testing 
+
+    void ValidateKeyboardInteraction()
+    {
+        foreach (GameObject buttonObject in arabicKeyboardButtons)
+        {
+            Button btn = buttonObject.GetComponent<Button>();
+
+            if (btn == null)
+            {
+                Debug.LogError($"ERROR: Button missing on {buttonObject.name}");
+                continue;
+            }
+
+            if (!btn.interactable)
+            {
+                Debug.LogError($"WARNING: {buttonObject.name} is not interactable!");
+                btn.interactable = true; // Force enable interaction
+            }
+
+            Image img = buttonObject.GetComponent<Image>();
+            if (img != null && !img.raycastTarget)
+            {
+                Debug.LogError($"WARNING: {buttonObject.name} Raycast Target is disabled!");
+                img.raycastTarget = true; // Force enable raycast
+            }
+        }
     }
 
 
