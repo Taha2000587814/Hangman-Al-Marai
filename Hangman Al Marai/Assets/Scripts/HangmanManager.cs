@@ -269,14 +269,14 @@ public class HangmanManager : MonoBehaviour
     {
         int remainingHiddenLetters = 0;
 
-        // Dynamically determine if Arabic or English mode is active
         if (HangmanAR.activeSelf) // Arabic mode
         {
+            // Ensure Arabic sentence parts are counted correctly
             foreach (char[] part in displayedWords)
             {
                 if (part != null) // Prevent possible null reference errors
                 {
-                    remainingHiddenLetters += part.Count(c => c == ' '); // Count hidden spaces
+                    remainingHiddenLetters += part.Count(c => c == ' '); // Count remaining hidden spaces
                 }
             }
         }
@@ -290,13 +290,14 @@ public class HangmanManager : MonoBehaviour
 
         Debug.Log($"🧐 Remaining hidden letters: {remainingHiddenLetters}");
 
-        // 🔹 Trigger win sequence immediately when ALL hidden letters are revealed
+        // 🔹 Only trigger win when ALL hidden letters are revealed
         if (remainingHiddenLetters == 0)
         {
             Debug.Log("✅ All hidden letters revealed! Player wins.");
             HandleWin();
         }
     }
+
 
 
 
@@ -353,7 +354,8 @@ public class HangmanManager : MonoBehaviour
         if (!new string(displayedWord).Contains(" "))
         {
             Debug.Log("✅ All hidden letters revealed! Player wins.");
-            HandleWin();
+            //HandleWin();
+            CheckWinCondition(); 
         }
     }
 
@@ -732,16 +734,23 @@ public class HangmanManager : MonoBehaviour
 
         char guess = letter[0];
         bool correctGuess = false;
+        int remainingHiddenLetters = 0;  // Track unrevealed letters
 
         for (int i = 0; i < arabicSentenceParts.Length; i++)
         {
             for (int j = 0; j < displayedWords[i].Length; j++)
             {
-                if (displayedWords[i][j] == ' ' && arabicSentenceParts[i][j] == guess) // Proper replacement
+                if (displayedWords[i][j] == ' ' && arabicSentenceParts[i][j] == guess) // Correct replacement
                 {
                     displayedWords[i][j] = guess;
                     correctGuess = true;
                     Debug.Log($"✅ Correct Arabic guess! '{letter}' revealed at [{i}, {j}].");
+                }
+
+                // Count hidden letters AFTER replacement
+                if (displayedWords[i][j] == ' ')
+                {
+                    remainingHiddenLetters++;
                 }
             }
         }
@@ -760,7 +769,6 @@ public class HangmanManager : MonoBehaviour
             arabicIdleKids.SetActive(false);
 
             arabicPouringAnimation.SetTrigger("pour");
-          
 
             StartCoroutine(ResetArabicReaction());
             OnCorrectLetterGuessed();
@@ -780,8 +788,14 @@ public class HangmanManager : MonoBehaviour
             }
         }
 
-        CheckWinCondition();
+        // 🔹 Fix: Ensure win condition ONLY happens when all hidden letters are revealed
+        if (remainingHiddenLetters == 0)
+        {
+            Debug.Log("✅ Arabic mode: All hidden letters revealed! Player wins.");
+            HandleWin();
+        }
     }
+
 
 
 
