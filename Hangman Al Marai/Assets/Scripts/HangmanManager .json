@@ -31,19 +31,19 @@ public class HangmanManager : MonoBehaviour
 
     public GameObject GameOverPanel, WinPanel; 
 
-  
+    // Milk Meter Progression
+    public Animator pourAnimator; // Milk pouring animation
+    public GameObject[] milkMeters; // Array of milk meter objects (low to high)
     private int currentMilkState = 0;
     private int correctGuesses = 0;
     private int totalMissingLetters = 7; // Number of required guesses
 
     // Arabic milk meter and pouring animation
-    public GameObject[] arabicMilkMeters;  // Assign these in the Inspector
-    public GameObject[] englishMilkMeters; // Assign these in the Inspector
-
+    public GameObject arabicMilkMeter;
     public Animator arabicPouringAnimation;
 
     // English milk meter and pouring animation
- 
+    public GameObject englishMilkMeter;
     public Animator englishPouringAnimation;
 
 
@@ -158,20 +158,22 @@ public class HangmanManager : MonoBehaviour
             return;
         }
 
-        // Store uppercase and lowercase versions of the letter
-        char guessLower = char.ToLower(letter[0]);
-        char guessUpper = char.ToUpper(letter[0]);
+        // Convert all letters to lowercase EXCEPT M, E, I, T, S, W
+        if (!new HashSet<string> { "M", "E", "I", "T", "S", "W" }.Contains(letter))
+        {
+            letter = letter.ToLower();
+        }
 
+        char guess = letter[0];
         bool correctGuess = false;
 
         for (int i = 0; i < displayedWord.Length; i++)
         {
-            // Reveal letter whether it's uppercase or lowercase
-            if (displayedWord[i] == ' ' && (fullSentence[i] == guessLower || fullSentence[i] == guessUpper))
+            if (displayedWord[i] == guess)
             {
-                displayedWord[i] = fullSentence[i]; // Preserve original case
+                displayedWord[i] = guess;
                 correctGuess = true;
-                Debug.Log($"✅ Correct guess! '{letter}' revealed at index {i}.");
+                Debug.Log($"✅ Correct English guess! '{letter}' revealed at index {i}.");
             }
         }
 
@@ -182,7 +184,7 @@ public class HangmanManager : MonoBehaviour
             pressedButton.GetComponent<Image>().color = Color.green;
             correctAudio.PlayOneShot(correctAudio.clip);
 
-            StartCoroutine(WinReactionSequenceEnglish());
+            StartCoroutine(WinReactionSequenceEnglish()); // Correct win reaction
 
             englishCowHappy.SetActive(true);
             englishHappyKids.SetActive(true);
@@ -190,20 +192,19 @@ public class HangmanManager : MonoBehaviour
             englishSadKids.SetActive(false);
             englishIdleKids.SetActive(false);
 
-            englishPouringAnimation.SetBool("isPouring", true);
-            englishPouringAnimation.Play("pour");
-            Invoke("StopPouring", 1.5f);
+            englishPouringAnimation.SetTrigger("PourMilk");
+            englishMilkMeter.GetComponent<Slider>().value += 1;
 
             OnCorrectLetterGuessed();
         }
         else
         {
             incorrectAttempts++;
-            Debug.Log($"❌ Incorrect guess: '{letter}' is not in the sentence.");
+            Debug.Log($"❌ Incorrect English guess: '{letter}' is not in the sentence.");
             pressedButton.GetComponent<Image>().color = Color.red;
             incorrectAudio.PlayOneShot(incorrectAudio.clip);
 
-            StartCoroutine(IncorrectReactionEnglish());
+            StartCoroutine(IncorrectReactionEnglish()); // Incorrect reaction
 
             if (incorrectAttempts >= maxAttempts)
             {
@@ -213,8 +214,6 @@ public class HangmanManager : MonoBehaviour
 
         CheckWinCondition();
     }
-
-
 
 
 
@@ -268,28 +267,22 @@ public class HangmanManager : MonoBehaviour
     {
         int remainingHiddenLetters = 0;
 
-        // Dynamically determine if Arabic or English mode is active
-        if (HangmanAR.activeSelf) // Arabic mode
+        // Count hidden letters correctly for Arabic mode
+        if (isArabicMode)
         {
             foreach (char[] part in displayedWords)
             {
-                if (part != null) // Prevent possible null reference errors
-                {
-                    remainingHiddenLetters += part.Count(c => c == ' '); // Count hidden spaces
-                }
+                remainingHiddenLetters += part.Count(c => c == ' '); // Count hidden spaces
             }
         }
-        else if (HangmanEN.activeSelf) // English mode
+        else // English mode
         {
-            if (displayedWord != null) // Prevent possible null reference errors
-            {
-                remainingHiddenLetters = displayedWord.Count(c => c == ' ');
-            }
+            remainingHiddenLetters = displayedWord.Count(c => c == ' ');
         }
 
         Debug.Log($"🧐 Remaining hidden letters: {remainingHiddenLetters}");
 
-        // 🔹 Trigger win sequence immediately when ALL hidden letters are revealed
+        // Only trigger win condition when ALL hidden letters are revealed
         if (remainingHiddenLetters == 0)
         {
             Debug.Log("✅ All hidden letters revealed! Player wins.");
@@ -300,85 +293,47 @@ public class HangmanManager : MonoBehaviour
 
 
 
-
     public void OnCorrectLetterGuessed()
     {
         correctGuesses++;
 
         Debug.Log($"Correct letter guessed! Current: {correctGuesses} / Total Hidden: {hiddenLetterCount}");
 
-        // 🔹 Select the correct pouring animation based on active mode
-        Animator activePourAnimator = HangmanAR.activeSelf ? arabicPouringAnimation : englishPouringAnimation;
-
-        if (activePourAnimator != null && !activePourAnimator.GetBool("isPouring"))
+        // Ensure pouring animation starts using isPouring
+        if (pourAnimator != null)
         {
-            Debug.Log($"✅ Pour animation triggered in {(HangmanAR.activeSelf ? "Arabic" : "English")} mode.");
-            activePourAnimator.SetBool("isPouring", true);
-            activePourAnimator.Play("pour");
-            //HandleMilkMeterProgression(); 
-
-            // Stop pouring after animation duration
-            float animLength = activePourAnimator.GetCurrentAnimatorStateInfo(0).length;
-            Invoke(HangmanAR.activeSelf ? "StopArabicPouring" : "StopPouring", animLength);
-        }
-        else if (activePourAnimator == null)
-        {
-            Debug.LogError("❌ ERROR: Pour animator is NULL! Check assignment.");
-        }
-
-        // 🔹 Milk meter progression logic (Arabic & English modes)
-        GameObject[] activeMilkMeter = HangmanAR.activeSelf ? arabicMilkMeters : englishMilkMeters;
-
-        if (currentMilkState < activeMilkMeter.Length - 1) // Ensure we don’t exceed the array limit
-        {
-            Debug.Log($"🚀 Milk state progressing: {currentMilkState} → {currentMilkState + 1}");
-
-            // 🔹 Disable all previous milk meter levels
-            for (int i = 0; i < activeMilkMeter.Length; i++)
-            {
-                activeMilkMeter[i].SetActive(i == currentMilkState + 1); // Enable only the next level
-            }
-
-            currentMilkState++; // Move to the next milk state
-
-            Debug.Log($"✅ Activated milk meter level: {currentMilkState}");
+            Debug.Log("Setting isPouring = true");
+            pourAnimator.SetBool("isPouring", true);
+            Invoke("StopPouring", 1.5f); // Stop animation after 1.5 seconds
         }
         else
         {
-            Debug.Log("🚀 Milk meter is fully filled!");
+            Debug.LogError("ERROR: pourAnimator is NULL!");
         }
 
-        // 🔹 Check win condition dynamically
+        int progressionStep = Mathf.Max(1, hiddenLetterCount / milkMeters.Length);
+
+        if (correctGuesses % progressionStep == 0 && currentMilkState < milkMeters.Length)
+        {
+            StartCoroutine(HandleMilkMeterProgression());
+        }
+
         if (!new string(displayedWord).Contains(" "))
         {
-            Debug.Log("✅ All hidden letters revealed! Player wins.");
+            Debug.Log("All hidden letters revealed! Player wins.");
             HandleWin();
         }
     }
 
-
-
-
-
     // Stop pouring after animation duration
     void StopPouring()
-    { 
-        if (englishPouringAnimation != null)
+    {
+        if (pourAnimator != null)
         {
             Debug.Log("Setting isPouring = false");
-            englishPouringAnimation.SetBool("isPouring", false);
+            pourAnimator.SetBool("isPouring", false);
         }
     }
-
-    void StopArabicPouring()
-    {
-        if (arabicPouringAnimation != null)
-        {
-            Debug.Log("🚫 Stopping Arabic pouring animation.");
-            arabicPouringAnimation.SetBool("isPouring", false);
-        }
-    }
-
 
 
 
@@ -388,44 +343,24 @@ public class HangmanManager : MonoBehaviour
         if (milkFillAudio != null)
         {
             milkFillAudio.Play();
-            Debug.Log("✅ Milk pouring sound played!");
+            Debug.Log("Milk pouring sound played!");
         }
 
         yield return new WaitForSeconds(1.5f);
 
-        // Select the correct milk meter array based on active mode
-        GameObject[] activeMilkMeter = HangmanAR.activeSelf ? arabicMilkMeters : englishMilkMeters;
-
-        // Stop progression if already at the final milk state
-        if (currentMilkState >= activeMilkMeter.Length - 1)
+        if (currentMilkState < milkMeters.Length - 1)
         {
-            Debug.Log("🚀 Milk meter is fully filled! No further progression.");
-            
-        }
+            Debug.Log($"Milk state progressing: {currentMilkState} ? {currentMilkState + 1}");
 
-        // 🔹 Disable ONLY the previous milk meter level
-        if (currentMilkState >= 0 && currentMilkState < activeMilkMeter.Length)
-        {
-            activeMilkMeter[currentMilkState].SetActive(false);
-        }
+            foreach (GameObject milkMeter in milkMeters)
+            {
+                milkMeter.SetActive(false);
+            }
 
-        // 🔹 Move to the next milk level and enable it
-        currentMilkState++;
-
-        if (currentMilkState < activeMilkMeter.Length && activeMilkMeter[currentMilkState] != null)
-        {
-            activeMilkMeter[currentMilkState].SetActive(true);
-            Debug.Log($"✅ Activated milk meter level: {currentMilkState}");
-        }
-        else
-        {
-            Debug.LogError("❌ ERROR: Milk meter index out of range or null reference.");
+            currentMilkState++; // Increment milk state
+            milkMeters[currentMilkState].SetActive(true);
         }
     }
-
-
-
-
 
 
 
@@ -521,7 +456,6 @@ public class HangmanManager : MonoBehaviour
 
         englishSadKids.SetActive(false);
         englishCowAngry.SetActive(false);
-        ResetEnglishReaction(); 
 
         Debug.Log("❌ English incorrect reaction sequence completed.");
     }
@@ -563,18 +497,15 @@ public class HangmanManager : MonoBehaviour
 
     void AdjustMilkMeterCount()
     {
-        // 🔹 Select the correct milk meter parent based on the active mode
-        GameObject[] activeMilkMeters = HangmanAR.activeSelf ? arabicMilkMeters : englishMilkMeters;
-
-        int currentCount = activeMilkMeters.Length;
+        int currentCount = milkMeters.Length;
 
         if (currentCount < hiddenLetterCount)
         {
             Debug.Log($"Milk meter count ({currentCount}) is lower than hidden letters ({hiddenLetterCount}). Adjusting...");
 
-            List<GameObject> adjustedMilkMeters = new List<GameObject>(activeMilkMeters);
+            List<GameObject> adjustedMilkMeters = new List<GameObject>(milkMeters);
 
-            GameObject lastMilkMeter = activeMilkMeters[currentCount - 1]; // Last assigned milk object
+            GameObject lastMilkMeter = milkMeters[currentCount - 1]; // Last assigned milk object
 
             while (adjustedMilkMeters.Count < hiddenLetterCount)
             {
@@ -582,27 +513,17 @@ public class HangmanManager : MonoBehaviour
                 adjustedMilkMeters.Add(duplicate);
             }
 
-            // 🔹 Update the correct array based on the mode
-            if (HangmanAR.activeSelf)
-            {
-                arabicMilkMeters = adjustedMilkMeters.ToArray();
-                Debug.Log($"✅ Arabic milk meters successfully adjusted to {arabicMilkMeters.Length}.");
-            }
-            else
-            {
-                englishMilkMeters = adjustedMilkMeters.ToArray();
-                Debug.Log($"✅ English milk meters successfully adjusted to {englishMilkMeters.Length}.");
-            }
+            milkMeters = adjustedMilkMeters.ToArray(); // Update array with new elements
+            Debug.Log($"Milk meters successfully adjusted to {milkMeters.Length}.");
         }
     }
 
 
 
 
-
     // Arabic Section
 
-    public string arabicSentence = "??? ?????? ?? ??????"; // Arabic sentence
+   public string arabicSentence = "??? ?????? ?? ??????"; // Arabic sentence
    
     public GameObject[] arabicKeyboardButtons; // Arabic keyboard buttons array
 
@@ -725,7 +646,7 @@ public class HangmanManager : MonoBehaviour
         {
             for (int j = 0; j < displayedWords[i].Length; j++)
             {
-                if (displayedWords[i][j] == ' ' && arabicSentenceParts[i][j] == guess) // Proper replacement
+                if (displayedWords[i][j] == guess)
                 {
                     displayedWords[i][j] = guess;
                     correctGuess = true;
@@ -741,14 +662,18 @@ public class HangmanManager : MonoBehaviour
             pressedButton.GetComponent<Image>().color = Color.green;
             correctAudio.PlayOneShot(correctAudio.clip);
 
+            // 🔹 Activate Arabic reactions
             arabicCowHappy.SetActive(true);
             arabicHappyKids.SetActive(true);
             arabicCowAngry.SetActive(false);
             arabicSadKids.SetActive(false);
             arabicIdleKids.SetActive(false);
 
-            arabicPouringAnimation.SetTrigger("pour");
-          
+            // 🔹 Play Arabic pouring animation
+            arabicPouringAnimation.SetTrigger("PourMilk");
+
+            // 🔹 Update Arabic milk meter UI (assuming it's a slider)
+            arabicMilkMeter.GetComponent<Slider>().value += 1;
 
             StartCoroutine(ResetArabicReaction());
             OnCorrectLetterGuessed();
@@ -757,10 +682,17 @@ public class HangmanManager : MonoBehaviour
         {
             incorrectAttempts++;
             Debug.Log($"❌ Incorrect Arabic guess: '{letter}' is not in the sentence.");
+
             pressedButton.GetComponent<Image>().color = Color.red;
             incorrectAudio.PlayOneShot(incorrectAudio.clip);
 
-            StartCoroutine(IncorrectReactionArabic());
+            arabicCowAngry.SetActive(true);
+            arabicSadKids.SetActive(true);
+            arabicCowHappy.SetActive(false);
+            arabicHappyKids.SetActive(false);
+            arabicIdleKids.SetActive(false);
+
+            StartCoroutine(ResetArabicReaction());
 
             if (incorrectAttempts >= maxAttempts)
             {
@@ -770,7 +702,6 @@ public class HangmanManager : MonoBehaviour
 
         CheckWinCondition();
     }
-
 
 
 

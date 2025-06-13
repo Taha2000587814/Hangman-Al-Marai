@@ -41,3 +41,6 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: 'Keyboard UI '
+    uniqueID: 3738326835
+    locked: 0
