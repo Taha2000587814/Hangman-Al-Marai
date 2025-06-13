@@ -16,7 +16,8 @@ public class HangmanManager : MonoBehaviour
 
     public string SceneName;
 
-    public AudioSource milkFillAudio; 
+    public AudioSource milkFillAudio;
+    public GameObject WinPanelAR; 
 
     public VideoPlayer videoPlayerEN; 
     public GameObject videoScreenEN;
@@ -552,13 +553,24 @@ public class HangmanManager : MonoBehaviour
     {
         yield return new WaitForSeconds(18f); // Adjust this delay as needed
 
-        Debug.Log("Activating win panel...");
-        WinPanel.SetActive(true); // Show win panel
+        Debug.Log("🚀 Activating win panel...");
 
-        // Hide video elements after win panel appears
+        if (HangmanAR.activeSelf) // Arabic mode
+        {
+            WinPanelAR.SetActive(true);
+            Debug.Log("✅ Arabic win panel activated!");
+        }
+        else // English mode
+        {
+            WinPanel.SetActive(true);
+            Debug.Log("✅ English win panel activated!");
+        }
+
+        // 🔹 Hide video elements after win panel appears (Handles both modes)
         videoPlayerEN.gameObject.SetActive(false);
         videoScreenEN.SetActive(false);
     }
+
 
 
     void AdjustMilkMeterCount()
