@@ -21,6 +21,7 @@ public class HangmanManager : MonoBehaviour
 
     public VideoPlayer videoPlayerEN; 
     public GameObject videoScreenEN;
+    public GameObject videoScreenAR; 
     public int hiddenLetterCount = 7; // Adjustable from Unity Inspector
 
     public bool isArabicMode = false , isEnglishMode = false; 
@@ -502,6 +503,10 @@ public class HangmanManager : MonoBehaviour
     {
         incorrectAudio.Play();
 
+        // 🔹 Hide idle state immediately
+        arabicIdleKids.SetActive(false);
+        arabicCowNormal.SetActive(false);
+
         arabicSadKids.SetActive(true);
         arabicCowAngry.SetActive(true);
 
@@ -510,12 +515,21 @@ public class HangmanManager : MonoBehaviour
         arabicSadKids.SetActive(false);
         arabicCowAngry.SetActive(false);
 
+        arabicIdleKids.SetActive(true);
+        arabicCowNormal.SetActive(true);
+
+        // Optional: Don't immediately show idle—let next input control it
         Debug.Log("❌ Arabic incorrect reaction sequence completed.");
     }
+
 
     IEnumerator IncorrectReactionEnglish()
     {
         incorrectAudio.Play();
+
+        // 🔹 Hide idle state immediately
+        englishIdleKids.SetActive(false);
+        englishCowNormal.SetActive(false);
 
         englishSadKids.SetActive(true);
         englishCowAngry.SetActive(true);
@@ -524,10 +538,13 @@ public class HangmanManager : MonoBehaviour
 
         englishSadKids.SetActive(false);
         englishCowAngry.SetActive(false);
-        ResetEnglishReaction(); 
+        englishIdleKids.SetActive(true);
+        englishCowNormal.SetActive(true);
 
+        // Optional: skip calling ResetEnglishReaction() here
         Debug.Log("❌ English incorrect reaction sequence completed.");
     }
+
 
 
     public void Retry()
@@ -540,16 +557,36 @@ public class HangmanManager : MonoBehaviour
     }
 
 
+    public VideoPlayer videoPlayerAR; 
+
     public void HandleWin()
     {
         Debug.Log("Player won! Activating video...");
 
-        videoScreenEN.SetActive(true); // Show video screen
-        videoPlayerEN.gameObject.SetActive(true); // Enable VideoPlayer
-        videoPlayerEN.Play(); // Start playback
+        // 🔇 Stop any currently playing audio
+        if (correctAudio.isPlaying) correctAudio.Stop();
+        if (incorrectAudio.isPlaying) incorrectAudio.Stop();
+        if (milkFillAudio != null && milkFillAudio.isPlaying) milkFillAudio.Stop();
+
+        // 🔹 Activate appropriate video and screen based on mode
+        if (HangmanAR.activeSelf) // Arabic mode
+        {
+            videoScreenAR.SetActive(true);
+            videoPlayerAR.gameObject.SetActive(true);
+            videoPlayerAR.Play();
+            Debug.Log("🎥 Playing Arabic win video");
+        }
+        else // English mode
+        {
+            videoScreenEN.SetActive(true);
+            videoPlayerEN.gameObject.SetActive(true);
+            videoPlayerEN.Play();
+            Debug.Log("🎥 Playing English win video");
+        }
 
         StartCoroutine(ActivateWinPanelAfterDelay());
     }
+
 
     IEnumerator ActivateWinPanelAfterDelay()
     {
@@ -571,6 +608,8 @@ public class HangmanManager : MonoBehaviour
         // 🔹 Hide video elements after win panel appears (Handles both modes)
         videoPlayerEN.gameObject.SetActive(false);
         videoScreenEN.SetActive(false);
+        videoPlayerAR.gameObject.SetActive(false);
+        videoScreenAR.SetActive(false);
     }
 
 
