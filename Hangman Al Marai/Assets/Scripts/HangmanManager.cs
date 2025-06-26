@@ -67,7 +67,12 @@ public class HangmanManager : MonoBehaviour
     public AudioSource correctAudio;
     public AudioSource incorrectAudio;
 
-    public GameObject StartingScreen, HangmanEN, HangmanAR; 
+    public GameObject StartingScreen, HangmanEN, HangmanAR;
+    public GameObject[] englishLetterTiles; // Visual GameObjects (assign in order)
+    public char[] englishLetterValues;      // Match each tile's letter (assign in Inspector)
+
+    private int remainingTiles;
+
 
     // Keyboard Input
     public GameObject[] keyboardButtons; // Array of keyboard buttons (A-Z)
@@ -79,6 +84,42 @@ public class HangmanManager : MonoBehaviour
         HangmanEN.SetActive(false);
         HangmanAR.SetActive(false);
     }
+
+    public void InitializeGameVisual()
+    {
+        StartingScreen.SetActive(false);
+        HangmanEN.SetActive(true);
+        HangmanAR.SetActive(false);
+        isEnglishMode = true;
+
+        AssignLetterValues();
+        ValidateKeyboardInteraction();
+
+        remainingTiles = 0;
+
+        // Create shuffled index list
+        List<int> indices = Enumerable.Range(0, englishLetterTiles.Length).ToList();
+        System.Random rand = new System.Random();
+        indices = indices.OrderBy(x => rand.Next()).ToList();
+
+        for (int i = 0; i < englishLetterTiles.Length; i++)
+        {
+            bool shouldHide = i < hiddenLetterCount;
+
+            if (shouldHide)
+            {
+                englishLetterTiles[indices[i]].SetActive(false);
+                remainingTiles++;
+            }
+            else
+            {
+                englishLetterTiles[indices[i]].SetActive(true);
+            }
+        }
+
+        Debug.Log($"🔠 Initialized {hiddenLetterCount} hidden tiles out of {englishLetterTiles.Length}.");
+    }
+
 
 
     Dictionary<string, Button> keyboardMap = new Dictionary<string, Button>();
@@ -114,15 +155,16 @@ public class HangmanManager : MonoBehaviour
 
     public void InitializeGame()
     {
-        displayedWord = fullSentence.ToCharArray();
-        HideRandomLetters(displayedWord, hiddenLetterCount); // Use adjustable value
-        UpdateWordDisplay();
+      //  displayedWord = fullSentence.ToCharArray();
+     //   HideRandomLetters(displayedWord, hiddenLetterCount); // Use adjustable value
+     //   UpdateWordDisplay();
         AssignLetterValues();
         StartingScreen.SetActive(false);
         HangmanAR.SetActive(false);
         HangmanEN.SetActive(true);
         ValidateKeyboardInteraction();
-        isEnglishMode = true; 
+        isEnglishMode = true;
+        InitializeGameVisual(); 
     }
 
 
@@ -146,38 +188,26 @@ public class HangmanManager : MonoBehaviour
     {
         Debug.Log($"Pressed English letter: {letter}");
 
-        if (!keyboardMap.ContainsKey(letter))
+        if (!keyboardMap.TryGetValue(letter, out Button pressedButton) || pressedButton == null)
         {
-            Debug.LogError($"ERROR: English letter '{letter}' not found in dictionary!");
+            Debug.LogError($"❌ ERROR: Button for '{letter}' is missing or null!");
             return;
         }
 
-        Button pressedButton = keyboardMap[letter];
-
-        if (pressedButton == null)
-        {
-            Debug.LogError($"ERROR: English button '{letter}' is NULL!");
-            return;
-        }
-
-        // Store uppercase and lowercase versions of the letter
-        char guessLower = char.ToLower(letter[0]);
-        char guessUpper = char.ToUpper(letter[0]);
-
+        char guess = char.ToUpper(letter[0]);
         bool correctGuess = false;
 
-        for (int i = 0; i < displayedWord.Length; i++)
+        for (int i = 0; i < englishLetterValues.Length; i++)
         {
-            // Reveal letter whether it's uppercase or lowercase
-            if (displayedWord[i] == ' ' && (fullSentence[i] == guessLower || fullSentence[i] == guessUpper))
+            if (!englishLetterTiles[i].activeSelf &&
+                char.ToUpper(englishLetterValues[i]) == guess)
             {
-                displayedWord[i] = fullSentence[i]; // Preserve original case
+                englishLetterTiles[i].SetActive(true);
+                remainingTiles--;
                 correctGuess = true;
-                Debug.Log($"✅ Correct guess! '{letter}' revealed at index {i}.");
+                Debug.Log($"✅ Revealed letter '{guess}' at index {i}.");
             }
         }
-
-        UpdateWordDisplay();
 
         if (correctGuess)
         {
@@ -197,13 +227,18 @@ public class HangmanManager : MonoBehaviour
             Invoke("StopPouring", 1.5f);
 
             OnCorrectLetterGuessed();
+
+            if (remainingTiles <= 0)
+            {
+                Debug.Log("🏆 All tiles revealed. Player wins!");
+                HandleWin();
+            }
         }
         else
         {
-            incorrectAttempts++;
-            Debug.Log($"❌ Incorrect guess: '{letter}' is not in the sentence.");
             pressedButton.GetComponent<Image>().color = Color.red;
             incorrectAudio.PlayOneShot(incorrectAudio.clip);
+            incorrectAttempts++;
 
             StartCoroutine(IncorrectReactionEnglish());
 
@@ -212,9 +247,9 @@ public class HangmanManager : MonoBehaviour
                 EndGame(false);
             }
         }
-
-        CheckWinCondition();
     }
+
+
 
 
 
@@ -268,36 +303,36 @@ public class HangmanManager : MonoBehaviour
 
     void CheckWinCondition()
     {
-        int remainingHiddenLetters = 0;
-
-        if (HangmanAR.activeSelf) // Arabic mode
+        if (HangmanEN.activeSelf) // English mode with GameObject tiles
         {
-            // Ensure Arabic sentence parts are counted correctly
+            if (remainingTiles <= 0)
+            {
+                Debug.Log("✅ All tiles revealed! Player wins.");
+                HandleWin();
+            }
+        }
+        else if (HangmanAR.activeSelf) // Arabic mode
+        {
+            int remainingHiddenLetters = 0;
+
             foreach (char[] part in displayedWords)
             {
-                if (part != null) // Prevent possible null reference errors
+                if (part != null)
                 {
-                    remainingHiddenLetters += part.Count(c => c == ' '); // Count remaining hidden spaces
+                    remainingHiddenLetters += part.Count(c => c == ' ');
                 }
             }
-        }
-        else if (HangmanEN.activeSelf) // English mode
-        {
-            if (displayedWord != null) // Prevent possible null reference errors
+
+            Debug.Log($"🧐 Remaining Arabic hidden letters: {remainingHiddenLetters}");
+
+            if (remainingHiddenLetters == 0)
             {
-                remainingHiddenLetters = displayedWord.Count(c => c == ' ');
+                Debug.Log("✅ Arabic mode: All letters revealed! Player wins.");
+                HandleWin();
             }
         }
-
-        Debug.Log($"🧐 Remaining hidden letters: {remainingHiddenLetters}");
-
-        // 🔹 Only trigger win when ALL hidden letters are revealed
-        if (remainingHiddenLetters == 0)
-        {
-            Debug.Log("✅ All hidden letters revealed! Player wins.");
-            HandleWin();
-        }
     }
+
 
 
 
