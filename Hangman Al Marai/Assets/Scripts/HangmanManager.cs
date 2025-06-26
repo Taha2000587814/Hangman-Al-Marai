@@ -73,6 +73,12 @@ public class HangmanManager : MonoBehaviour
 
     private int remainingTiles;
 
+    public GameObject pourObjectEN, pourObjectAR;
+
+    public GameObject splashObjectEN, splashObjectAR;
+    public Animator splashAnimatorEN, splashAnimatorAR;
+
+
 
     // Keyboard Input
     public GameObject[] keyboardButtons; // Array of keyboard buttons (A-Z)
@@ -91,7 +97,7 @@ public class HangmanManager : MonoBehaviour
         HangmanEN.SetActive(true);
         HangmanAR.SetActive(false);
         isEnglishMode = true;
-
+        pourObjectEN.SetActive(false);
         AssignLetterValues();
         ValidateKeyboardInteraction();
 
@@ -342,58 +348,57 @@ public class HangmanManager : MonoBehaviour
     public void OnCorrectLetterGuessed()
     {
         correctGuesses++;
-
         Debug.Log($"Correct letter guessed! Current: {correctGuesses} / Total Hidden: {hiddenLetterCount}");
 
-        // 🔹 Select the correct pouring animation based on active mode
-        Animator activePourAnimator = HangmanAR.activeSelf ? arabicPouringAnimation : englishPouringAnimation;
+        bool isArabic = HangmanAR.activeSelf;
 
-        if (activePourAnimator != null && !activePourAnimator.GetBool("isPouring"))
+        // 🎬 Pouring setup
+        GameObject pourObj = isArabic ? pourObjectAR : pourObjectEN;
+        Animator pourAnim = isArabic ? arabicPouringAnimation : englishPouringAnimation;
+
+        // 💦 Splash setup
+        GameObject splashObj = isArabic ? splashObjectAR : splashObjectEN;
+        Animator splashAnim = isArabic ? splashAnimatorAR : splashAnimatorEN;
+
+        // ▶️ Activate pour
+        if (pourObj != null && pourAnim != null)
         {
-            Debug.Log($"✅ Pour animation triggered in {(HangmanAR.activeSelf ? "Arabic" : "English")} mode.");
-            activePourAnimator.SetBool("isPouring", true);
-            activePourAnimator.Play("pour");
-            //HandleMilkMeterProgression(); 
+            pourObj.SetActive(true);
+            pourAnim.SetBool("isPouring", true);
+            pourAnim.Play("pour", 0, 0f);
 
-            // Stop pouring after animation duration
-            float animLength = activePourAnimator.GetCurrentAnimatorStateInfo(0).length;
-            Invoke(HangmanAR.activeSelf ? "StopArabicPouring" : "StopPouring", animLength);
+            // Realtime adjusted duration
+            AnimationClip pourClip = pourAnim.runtimeAnimatorController.animationClips
+                .FirstOrDefault(clip => clip.name == "pour");
+
+            float playbackSpeed = pourAnim.GetCurrentAnimatorStateInfo(0).speed;
+            float clipLength = pourClip != null ? pourClip.length : 1.5f;
+
+            float realDuration = clipLength / playbackSpeed;
+
+            Debug.Log($"⏱ Pouring animation clip is '{clipLength}'s, speed = {playbackSpeed}, so total = {realDuration}s");
+
+            StartCoroutine(HandleMilkMeterProgression(realDuration));
         }
-        else if (activePourAnimator == null)
+
+
+
+
+
+        float animLength = pourAnim.GetCurrentAnimatorStateInfo(0).length;
+        StartCoroutine(HandleMilkMeterProgression(animLength));
+
+        // 🏆 Check win condition using updated visual logic
+        if (HangmanEN.activeSelf)
         {
-            Debug.LogError("❌ ERROR: Pour animator is NULL! Check assignment.");
-        }
-
-        // 🔹 Milk meter progression logic (Arabic & English modes)
-        GameObject[] activeMilkMeter = HangmanAR.activeSelf ? arabicMilkMeters : englishMilkMeters;
-
-        if (currentMilkState < activeMilkMeter.Length - 1) // Ensure we don’t exceed the array limit
-        {
-            Debug.Log($"🚀 Milk state progressing: {currentMilkState} → {currentMilkState + 1}");
-
-            // 🔹 Disable all previous milk meter levels
-            for (int i = 0; i < activeMilkMeter.Length; i++)
-            {
-                activeMilkMeter[i].SetActive(i == currentMilkState + 1); // Enable only the next level
-            }
-
-            currentMilkState++; // Move to the next milk state
-
-            Debug.Log($"✅ Activated milk meter level: {currentMilkState}");
+            if (remainingTiles == 0) CheckWinCondition();
         }
         else
         {
-            Debug.Log("🚀 Milk meter is fully filled!");
-        }
-
-        // 🔹 Check win condition dynamically
-        if (!new string(displayedWord).Contains(" "))
-        {
-            Debug.Log("✅ All hidden letters revealed! Player wins.");
-            //HandleWin();
-            CheckWinCondition(); 
+            CheckWinCondition(); // For Arabic sentence logic
         }
     }
+
 
 
 
@@ -422,44 +427,34 @@ public class HangmanManager : MonoBehaviour
 
 
 
-    IEnumerator HandleMilkMeterProgression()
+    IEnumerator HandleMilkMeterProgression(float delay)
     {
-        if (milkFillAudio != null)
+        yield return new WaitForSeconds(delay);
+
+        // Audio
+        milkFillAudio?.Play();
+
+        // Get proper milk meter array
+        bool isArabic = HangmanAR.activeSelf;
+        GameObject[] activeMeter = isArabic ? arabicMilkMeters : englishMilkMeters;
+
+        // Disable pour & splash objects
+        (isArabic ? pourObjectAR : pourObjectEN)?.SetActive(false);
+        (isArabic ? splashObjectAR : splashObjectEN)?.SetActive(false);
+
+        if (currentMilkState >= activeMeter.Length - 1)
         {
-            milkFillAudio.Play();
-            Debug.Log("✅ Milk pouring sound played!");
+            Debug.Log("🚀 Milk meter is fully filled!");
+            yield break;
         }
 
-        yield return new WaitForSeconds(1.5f);
-
-        // Select the correct milk meter array based on active mode
-        GameObject[] activeMilkMeter = HangmanAR.activeSelf ? arabicMilkMeters : englishMilkMeters;
-
-        // Stop progression if already at the final milk state
-        if (currentMilkState >= activeMilkMeter.Length - 1)
+        for (int i = 0; i < activeMeter.Length; i++)
         {
-            Debug.Log("🚀 Milk meter is fully filled! No further progression.");
-            
+            activeMeter[i].SetActive(i == currentMilkState + 1);
         }
 
-        // 🔹 Disable ONLY the previous milk meter level
-        if (currentMilkState >= 0 && currentMilkState < activeMilkMeter.Length)
-        {
-            activeMilkMeter[currentMilkState].SetActive(false);
-        }
-
-        // 🔹 Move to the next milk level and enable it
         currentMilkState++;
-
-        if (currentMilkState < activeMilkMeter.Length && activeMilkMeter[currentMilkState] != null)
-        {
-            activeMilkMeter[currentMilkState].SetActive(true);
-            Debug.Log($"✅ Activated milk meter level: {currentMilkState}");
-        }
-        else
-        {
-            Debug.LogError("❌ ERROR: Milk meter index out of range or null reference.");
-        }
+        Debug.Log($"✅ Milk meter updated to level: {currentMilkState}");
     }
 
 
@@ -719,7 +714,7 @@ public class HangmanManager : MonoBehaviour
         UpdateArabicDisplay();
         AssignArabicLetterValues();
         ValidateKeyboardInteraction(); // Ensure all Arabic keyboard buttons are interactable
-
+        pourObjectAR.SetActive(false);
         StartingScreen.SetActive(false);
         HangmanAR.SetActive(true);
         HangmanEN.SetActive(false);
