@@ -309,35 +309,28 @@ public class HangmanManager : MonoBehaviour
 
     void CheckWinCondition()
     {
-        if (HangmanEN.activeSelf) // English mode with GameObject tiles
+        if (HangmanEN.activeSelf) // English mode
         {
             if (remainingTiles <= 0)
             {
                 Debug.Log("✅ All tiles revealed! Player wins.");
                 HandleWin();
+                pourObjectEN.SetActive(false);
             }
         }
         else if (HangmanAR.activeSelf) // Arabic mode
         {
-            int remainingHiddenLetters = 0;
+            Debug.Log($"🧐 Remaining Arabic hidden tiles: {remainingArabicTiles}");
 
-            foreach (char[] part in displayedWords)
+            if (remainingArabicTiles <= 0)
             {
-                if (part != null)
-                {
-                    remainingHiddenLetters += part.Count(c => c == ' ');
-                }
-            }
-
-            Debug.Log($"🧐 Remaining Arabic hidden letters: {remainingHiddenLetters}");
-
-            if (remainingHiddenLetters == 0)
-            {
-                Debug.Log("✅ Arabic mode: All letters revealed! Player wins.");
+                Debug.Log("🏆 All Arabic tiles revealed! Player wins.");
                 HandleWin();
+                pourObjectAR.SetActive(false);
             }
         }
     }
+
 
 
 
@@ -697,29 +690,48 @@ public class HangmanManager : MonoBehaviour
    
     public TMP_Text[] arabicLetterSlots; // Arabic text slots
 
+    [System.Serializable]
+    public class ArabicTileData
+    {
+        public GameObject tileObject;
+        public List<char> tileLetters; // Assignable directly in Inspector
+    }
+
+    public List<ArabicTileData> arabicTiles = new List<ArabicTileData>();
+    private int remainingArabicTiles = 0;
 
 
     public void InitializeArabicGame()
     {
-        displayedWords = new char[arabicSentenceParts.Length][];
+        remainingArabicTiles = 0;
 
-        int lettersToHidePerPart = hiddenLetterCount / arabicSentenceParts.Length; // Ensure consistency
+        List<int> indices = Enumerable.Range(0, arabicTiles.Count).ToList();
+        System.Random rand = new System.Random();
+        indices = indices.OrderBy(i => rand.Next()).ToList();
 
-        for (int i = 0; i < arabicSentenceParts.Length; i++)
+        for (int i = 0; i < arabicTiles.Count; i++)
         {
-            displayedWords[i] = arabicSentenceParts[i].ToCharArray();
-            HideRandomLetters(displayedWords[i], lettersToHidePerPart); // Use the same logic as English mode
+            var tileData = arabicTiles[indices[i]];
+            bool shouldHide = i < hiddenLetterCount;
+
+            tileData.tileObject.SetActive(!shouldHide);
+
+            if (shouldHide) remainingArabicTiles++;
         }
 
-        UpdateArabicDisplay();
         AssignArabicLetterValues();
-        ValidateKeyboardInteraction(); // Ensure all Arabic keyboard buttons are interactable
+        ValidateKeyboardInteraction();
         pourObjectAR.SetActive(false);
         StartingScreen.SetActive(false);
         HangmanAR.SetActive(true);
         HangmanEN.SetActive(false);
-        isArabicMode = true; 
+        isArabicMode = true;
+
+        Debug.Log($"🕌 Arabic tiles hidden: {remainingArabicTiles}");
     }
+
+
+
 
 
 
@@ -787,6 +799,7 @@ public class HangmanManager : MonoBehaviour
     {
         Debug.Log($"Pressed Arabic letter: {letter}");
 
+        // 🔸 Validate letter in keyboard map
         if (!arabicKeyboardMap.ContainsKey(letter))
         {
             Debug.LogError($"ERROR: Arabic letter '{letter}' not found in dictionary!");
@@ -794,7 +807,6 @@ public class HangmanManager : MonoBehaviour
         }
 
         Button pressedButton = arabicKeyboardMap[letter];
-
         if (pressedButton == null)
         {
             Debug.LogError($"ERROR: Arabic button '{letter}' is NULL!");
@@ -803,33 +815,24 @@ public class HangmanManager : MonoBehaviour
 
         char guess = letter[0];
         bool correctGuess = false;
-        int remainingHiddenLetters = 0;  // Track unrevealed letters
 
-        for (int i = 0; i < arabicSentenceParts.Length; i++)
+        // 🔸 Reveal any tiles that contain this letter
+        foreach (var tileData in arabicTiles)
         {
-            for (int j = 0; j < displayedWords[i].Length; j++)
+            if (!tileData.tileObject.activeSelf && tileData.tileLetters.Contains(guess))
             {
-                if (displayedWords[i][j] == ' ' && arabicSentenceParts[i][j] == guess) // Correct replacement
-                {
-                    displayedWords[i][j] = guess;
-                    correctGuess = true;
-                    Debug.Log($"✅ Correct Arabic guess! '{letter}' revealed at [{i}, {j}].");
-                }
-
-                // Count hidden letters AFTER replacement
-                if (displayedWords[i][j] == ' ')
-                {
-                    remainingHiddenLetters++;
-                }
+                tileData.tileObject.SetActive(true);
+                remainingArabicTiles--;
+                correctGuess = true;
+                Debug.Log($"✅ Revealed tile with Arabic letter '{guess}'");
             }
         }
 
-        UpdateArabicDisplay();
-
+        // 🔸 Handle result
         if (correctGuess)
         {
             pressedButton.GetComponent<Image>().color = Color.green;
-            correctAudio.PlayOneShot(correctAudio.clip);
+            correctAudio?.PlayOneShot(correctAudio.clip);
 
             arabicCowHappy.SetActive(true);
             arabicHappyKids.SetActive(true);
@@ -837,18 +840,19 @@ public class HangmanManager : MonoBehaviour
             arabicSadKids.SetActive(false);
             arabicIdleKids.SetActive(false);
 
-            arabicPouringAnimation.SetTrigger("pour");
-
-            StartCoroutine(ResetArabicReaction());
             OnCorrectLetterGuessed();
+
+            if (remainingArabicTiles <= 0)
+            {
+                Debug.Log("🏆 All Arabic tiles revealed! Player wins.");
+                HandleWin();
+            }
         }
         else
         {
             incorrectAttempts++;
-            Debug.Log($"❌ Incorrect Arabic guess: '{letter}' is not in the sentence.");
             pressedButton.GetComponent<Image>().color = Color.red;
-            incorrectAudio.PlayOneShot(incorrectAudio.clip);
-
+            incorrectAudio?.PlayOneShot(incorrectAudio.clip);
             StartCoroutine(IncorrectReactionArabic());
 
             if (incorrectAttempts >= maxAttempts)
@@ -856,14 +860,9 @@ public class HangmanManager : MonoBehaviour
                 EndGame(false);
             }
         }
-
-        // 🔹 Fix: Ensure win condition ONLY happens when all hidden letters are revealed
-        if (remainingHiddenLetters == 0)
-        {
-            Debug.Log("✅ Arabic mode: All hidden letters revealed! Player wins.");
-            HandleWin();
-        }
     }
+
+
 
 
 
