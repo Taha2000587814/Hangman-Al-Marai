@@ -16,6 +16,29 @@ public class HangmanManager : MonoBehaviour
 
     public string SceneName;
 
+
+
+    // ─── New Fields at Top ───────────────────────────────────────────────────────
+    [Header("Audio Settings")]
+    public AudioSource themeAudio;    // Assign your background/theme music here
+    public AudioSource winAudio;      // Assign a one-shot win jingle here
+
+    // Letters to hide (fixed, non-duplicate)
+    private static readonly HashSet<char> hideLettersEN =
+        new HashSet<char> { 'l', 'k', 't', 'h', 'e', 'v', 'r', 'y', 'w' };
+    private static readonly HashSet<char> hideLettersAR =
+        new HashSet<char> { 'ش', 'س', 'ل', 'ح', 'ي' };
+
+
+    public List<int> fixedHiddenIndices = new List<int> { 1, 3, 5, 7, 9, 11, 13 }; // Example pattern
+
+
+    private Vector3 originalPourENPosition;
+    private Vector3 originalPourARPosition;
+
+    public Vector3 offScreenPosition = new Vector3(9999, 9999, 0);
+
+
     public AudioSource milkFillAudio;
     public GameObject WinPanelAR; 
 
@@ -23,6 +46,9 @@ public class HangmanManager : MonoBehaviour
     public GameObject videoScreenEN;
     public GameObject videoScreenAR; 
     public int hiddenLetterCount = 7; // Adjustable from Unity Inspector
+
+    [Header("Visual Settings")]
+    public Color unhiddenKeyColor = Color.gray;
 
     public bool isArabicMode = false , isEnglishMode = false; 
 
@@ -89,41 +115,60 @@ public class HangmanManager : MonoBehaviour
         StartingScreen.SetActive(true);
         HangmanEN.SetActive(false);
         HangmanAR.SetActive(false);
+        originalPourENPosition = pourObjectEN.transform.position;
+        originalPourARPosition = pourObjectAR.transform.position;
+
     }
 
+    // ─── Updated English Initialization ────────────────────────────────────────
     public void InitializeGameVisual()
     {
         StartingScreen.SetActive(false);
         HangmanEN.SetActive(true);
         HangmanAR.SetActive(false);
         isEnglishMode = true;
+
+        // Reset pour visuals
         pourObjectEN.SetActive(false);
+        pourObjectEN.transform.position = originalPourENPosition;
+
         AssignLetterValues();
         ValidateKeyboardInteraction();
 
         remainingTiles = 0;
-
-        // Create shuffled index list
-        List<int> indices = Enumerable.Range(0, englishLetterTiles.Length).ToList();
-        System.Random rand = new System.Random();
-        indices = indices.OrderBy(x => rand.Next()).ToList();
+        HashSet<char> visibleChars = new HashSet<char>();
 
         for (int i = 0; i < englishLetterTiles.Length; i++)
         {
-            bool shouldHide = i < hiddenLetterCount;
+            char letter = char.ToLower(englishLetterValues[i]);
+            bool shouldHide = hideLettersEN.Contains(letter);
+
+            // Show/hide tile
+            englishLetterTiles[i].SetActive(!shouldHide);
 
             if (shouldHide)
             {
-                englishLetterTiles[indices[i]].SetActive(false);
                 remainingTiles++;
             }
             else
             {
-                englishLetterTiles[indices[i]].SetActive(true);
+                visibleChars.Add(letter);
             }
         }
 
-        Debug.Log($"🔠 Initialized {hiddenLetterCount} hidden tiles out of {englishLetterTiles.Length}.");
+        // Grey out & disable keys for visible letters
+        foreach (var kv in keyboardMap)
+        {
+            char keyChar = kv.Key[0];
+            if (visibleChars.Contains(keyChar))
+            {
+                var btn = kv.Value;
+                btn.GetComponent<Image>().color = unhiddenKeyColor;
+                btn.interactable = false;
+            }
+        }
+
+        Debug.Log($"🔠 English hidden tiles: {remainingTiles} / {englishLetterTiles.Length}");
     }
 
 
@@ -161,16 +206,19 @@ public class HangmanManager : MonoBehaviour
 
     public void InitializeGame()
     {
-      //  displayedWord = fullSentence.ToCharArray();
-     //   HideRandomLetters(displayedWord, hiddenLetterCount); // Use adjustable value
-     //   UpdateWordDisplay();
+        //  displayedWord = fullSentence.ToCharArray();
+        //   HideRandomLetters(displayedWord, hiddenLetterCount); // Use adjustable value
+        //   UpdateWordDisplay();
+        AudioListener.volume = 1f;
         AssignLetterValues();
         StartingScreen.SetActive(false);
         HangmanAR.SetActive(false);
         HangmanEN.SetActive(true);
         ValidateKeyboardInteraction();
         isEnglishMode = true;
-        InitializeGameVisual(); 
+        InitializeGameVisual();
+       
+
     }
 
 
@@ -345,52 +393,18 @@ public class HangmanManager : MonoBehaviour
 
         bool isArabic = HangmanAR.activeSelf;
 
-        // 🎬 Pouring setup
-        GameObject pourObj = isArabic ? pourObjectAR : pourObjectEN;
-        Animator pourAnim = isArabic ? arabicPouringAnimation : englishPouringAnimation;
+        PlayCorrectReaction(isArabic); // 🔁 Use new reaction system
 
-        // 💦 Splash setup
-        GameObject splashObj = isArabic ? splashObjectAR : splashObjectEN;
-        Animator splashAnim = isArabic ? splashAnimatorAR : splashAnimatorEN;
-
-        // ▶️ Activate pour
-        if (pourObj != null && pourAnim != null)
-        {
-            pourObj.SetActive(true);
-            pourAnim.SetBool("isPouring", true);
-            pourAnim.Play("pour", 0, 0f);
-
-            // Realtime adjusted duration
-            AnimationClip pourClip = pourAnim.runtimeAnimatorController.animationClips
-                .FirstOrDefault(clip => clip.name == "pour");
-
-            float playbackSpeed = pourAnim.GetCurrentAnimatorStateInfo(0).speed;
-            float clipLength = pourClip != null ? pourClip.length : 1.5f;
-
-            float realDuration = clipLength / playbackSpeed;
-
-            Debug.Log($"⏱ Pouring animation clip is '{clipLength}'s, speed = {playbackSpeed}, so total = {realDuration}s");
-
-            StartCoroutine(HandleMilkMeterProgression(realDuration));
-        }
-
-
-
-
-
-        float animLength = pourAnim.GetCurrentAnimatorStateInfo(0).length;
-        StartCoroutine(HandleMilkMeterProgression(animLength));
-
-        // 🏆 Check win condition using updated visual logic
         if (HangmanEN.activeSelf)
         {
             if (remainingTiles == 0) CheckWinCondition();
         }
         else
         {
-            CheckWinCondition(); // For Arabic sentence logic
+            CheckWinCondition();
         }
     }
+
 
 
 
@@ -420,35 +434,43 @@ public class HangmanManager : MonoBehaviour
 
 
 
-    IEnumerator HandleMilkMeterProgression(float delay)
+    private IEnumerator HandleMilkMeterProgression(float delay)
     {
         yield return new WaitForSeconds(delay);
 
-        // Audio
-        milkFillAudio?.Play();
-
-        // Get proper milk meter array
         bool isArabic = HangmanAR.activeSelf;
         GameObject[] activeMeter = isArabic ? arabicMilkMeters : englishMilkMeters;
 
-        // Disable pour & splash objects
-        (isArabic ? pourObjectAR : pourObjectEN)?.SetActive(false);
-        (isArabic ? splashObjectAR : splashObjectEN)?.SetActive(false);
-
-        if (currentMilkState >= activeMeter.Length - 1)
+        if (activeMeter == null || activeMeter.Length == 0)
         {
-            Debug.Log("🚀 Milk meter is fully filled!");
+            Debug.LogWarning("⚠ Milk meter array is empty!");
             yield break;
         }
 
-        for (int i = 0; i < activeMeter.Length; i++)
-        {
-            activeMeter[i].SetActive(i == currentMilkState + 1);
-        }
+     // 🧹 Hide splash and pour visuals
+     (isArabic ? splashObjectAR : splashObjectEN)?.SetActive(false);
+        (isArabic ? pourObjectAR : pourObjectEN)?.SetActive(false);
 
-        currentMilkState++;
-        Debug.Log($"✅ Milk meter updated to level: {currentMilkState}");
+        // 🥛 Calculate cup index based on correct guesses
+        int cupCount = activeMeter.Length;
+        float fillRatio = Mathf.Clamp01((float)correctGuesses / cupCount); // using assigned cups only
+        int targetIndex = Mathf.Clamp(Mathf.RoundToInt(fillRatio * (cupCount - 1)), 0, cupCount - 1);
+
+        // 🔁 Update meter visuals
+        for (int i = 0; i < cupCount; i++)
+            activeMeter[i].SetActive(i == targetIndex);
+
+        currentMilkState = targetIndex;
+
+        Debug.Log($"🥛 Milk meter updated → Cup {currentMilkState + 1}/{cupCount} (Based on correct guesses: {correctGuesses})");
+
+        if (currentMilkState == cupCount - 1)
+            Debug.Log("✅ Final full cup reached.");
     }
+
+
+
+
 
 
 
@@ -472,12 +494,10 @@ public class HangmanManager : MonoBehaviour
                 StartCoroutine(WinReactionSequenceEnglish()); // English reactions
             }
         }
-        else
-        {
-            Debug.Log("❌ Game Over! Retry?");
-            GameOverPanel.SetActive(true);
-        }
+      
     }
+
+   
 
 
 
@@ -580,26 +600,43 @@ public class HangmanManager : MonoBehaviour
     }
 
 
-    public VideoPlayer videoPlayerAR; 
+    public VideoPlayer videoPlayerAR;
 
     public void HandleWin()
     {
-        Debug.Log("Player won! Activating video...");
+        // fire‐and‐forget our sequenced win logic
+        StartCoroutine(HandleWinSequence());
+    }
 
-        // 🔇 Stop any currently playing audio
-        if (correctAudio.isPlaying) correctAudio.Stop();
-        if (incorrectAudio.isPlaying) incorrectAudio.Stop();
-        if (milkFillAudio != null && milkFillAudio.isPlaying) milkFillAudio.Stop();
+    private IEnumerator HandleWinSequence()
+    {
+        Debug.Log("Player won! Starting win sequence…");
 
-        // 🔹 Activate appropriate video and screen based on mode
-        if (HangmanAR.activeSelf) // Arabic mode
+        // 1) stop all SFX and pause theme
+       // StopAllAudio();
+        if (themeAudio != null && themeAudio.isPlaying)
+            themeAudio.Pause();
+
+  
+
+        // 3) mute game audio completely
+        AudioListener.volume = 0f;
+
+        // 4) move pour visuals off-screen
+        if (HangmanAR.activeSelf)
+            pourObjectAR.transform.position = offScreenPosition;
+        else
+            pourObjectEN.transform.position = offScreenPosition;
+
+        // 5) display & play correct video
+        if (HangmanAR.activeSelf)
         {
             videoScreenAR.SetActive(true);
             videoPlayerAR.gameObject.SetActive(true);
             videoPlayerAR.Play();
             Debug.Log("🎥 Playing Arabic win video");
         }
-        else // English mode
+        else
         {
             videoScreenEN.SetActive(true);
             videoPlayerEN.gameObject.SetActive(true);
@@ -607,70 +644,149 @@ public class HangmanManager : MonoBehaviour
             Debug.Log("🎥 Playing English win video");
         }
 
+        // 6) start panel delay
         StartCoroutine(ActivateWinPanelAfterDelay());
+
+        // DONE — don’t unpause theme here
+        yield break;
+
     }
 
+    // ─── No changes below this line; helpers still work as before ──────────────
+    /*  private void StopAllAudio()
+      {
+          if (correctAudio?.isPlaying == true) correctAudio.Stop();
+          if (incorrectAudio?.isPlaying == true) incorrectAudio.Stop();
+          if (milkFillAudio?.isPlaying == true) milkFillAudio.Stop();
+          //if (winAudio?.isPlaying == true) winAudio.Stop(); 
+      } */
 
+
+
+
+
+
+    // ─── Updated Win Panel Coroutine ───────────────────────────────────────────
     IEnumerator ActivateWinPanelAfterDelay()
     {
-        yield return new WaitForSeconds(18f); // Adjust this delay as needed
+        // 🎥 Choose video player based on mode
+        VideoPlayer player = HangmanAR.activeSelf ? videoPlayerAR : videoPlayerEN;
 
-        Debug.Log("🚀 Activating win panel...");
+        // 🔧 Prepare video
+        player.Prepare();
+        while (!player.isPrepared) yield return null;
 
-        if (HangmanAR.activeSelf) // Arabic mode
+        // ▶️ Play video
+        player.Play();
+        Debug.Log("🎬 Win video started");
+
+        // ⏱ Use actual video length
+        float duration = (float)player.length;
+        Debug.Log($"⏳ Waiting for video duration: {duration} seconds");
+        yield return new WaitForSeconds(duration);
+
+        // 🏆 Show Win Panel
+        if (HangmanAR.activeSelf)
         {
             WinPanelAR.SetActive(true);
             Debug.Log("✅ Arabic win panel activated!");
         }
-        else // English mode
+        else
         {
             WinPanel.SetActive(true);
             Debug.Log("✅ English win panel activated!");
         }
 
-        // 🔹 Hide video elements after win panel appears (Handles both modes)
+        // 🧹 Hide video elements
         videoPlayerEN.gameObject.SetActive(false);
         videoScreenEN.SetActive(false);
         videoPlayerAR.gameObject.SetActive(false);
         videoScreenAR.SetActive(false);
+
+        
+        AudioListener.volume = 1f;
+
+        // 🔔 Super-validated endWinAudio block
+        if (endWinAudio != null && endWinAudio.clip != null)
+        {
+            endWinAudio.volume = 1f;
+            endWinAudio.loop = false;
+            endWinAudio.playOnAwake = false;
+            endWinAudio.spatialBlend = 0f;
+            endWinAudio.outputAudioMixerGroup = null;
+
+            if (!endWinAudio.gameObject.activeSelf)
+                endWinAudio.gameObject.SetActive(true);
+            if (!endWinAudio.enabled)
+                endWinAudio.enabled = true;
+
+            endWinAudio.Stop();
+            endWinAudio.Play();
+
+            Debug.Log($"🔊 endWinAudio triggered → Clip: {endWinAudio.clip.name}, Volume: {endWinAudio.volume}, Active: {endWinAudio.gameObject.activeSelf}, Enabled: {endWinAudio.enabled}");
+            yield return new WaitForSeconds(endWinAudio.clip.length);
+        }
+        else
+        {
+            Debug.LogWarning("❌ endWinAudio missing or clip not assigned!");
+        }
+
+        // 🔊 Restore global volume
+        AudioListener.volume = 1f;
+        if (themeAudio != null) themeAudio.UnPause();
+
+        Debug.Log("🎶 Theme music resumed");
     }
+
+
+
+
+
+    public AudioSource endWinAudio;
+
 
 
 
     void AdjustMilkMeterCount()
     {
-        // 🔹 Select the correct milk meter parent based on the active mode
         GameObject[] activeMilkMeters = HangmanAR.activeSelf ? arabicMilkMeters : englishMilkMeters;
+        List<GameObject> adjustedMilkMeters = new List<GameObject>(activeMilkMeters);
 
-        int currentCount = activeMilkMeters.Length;
+        int currentCount = adjustedMilkMeters.Count;
+        int targetCount = hiddenLetterCount;
 
-        if (currentCount < hiddenLetterCount)
+        GameObject lastMilkMeter = adjustedMilkMeters.Count > 0
+            ? adjustedMilkMeters[adjustedMilkMeters.Count - 1]
+            : null;
+
+        if (lastMilkMeter == null)
         {
-            Debug.Log($"Milk meter count ({currentCount}) is lower than hidden letters ({hiddenLetterCount}). Adjusting...");
+            Debug.LogError("Milk meter adjustment failed: no base object found!");
+            return;
+        }
 
-            List<GameObject> adjustedMilkMeters = new List<GameObject>(activeMilkMeters);
+        while (adjustedMilkMeters.Count < targetCount)
+        {
+            GameObject duplicate = Instantiate(lastMilkMeter, lastMilkMeter.transform.parent);
+            adjustedMilkMeters.Add(duplicate);
+        }
 
-            GameObject lastMilkMeter = activeMilkMeters[currentCount - 1]; // Last assigned milk object
+        // Append final “full milk” state explicitly at the end
+        GameObject fullMilkMeter = Instantiate(lastMilkMeter, lastMilkMeter.transform.parent);
+        adjustedMilkMeters.Add(fullMilkMeter);
 
-            while (adjustedMilkMeters.Count < hiddenLetterCount)
-            {
-                GameObject duplicate = Instantiate(lastMilkMeter, lastMilkMeter.transform.parent);
-                adjustedMilkMeters.Add(duplicate);
-            }
-
-            // 🔹 Update the correct array based on the mode
-            if (HangmanAR.activeSelf)
-            {
-                arabicMilkMeters = adjustedMilkMeters.ToArray();
-                Debug.Log($"✅ Arabic milk meters successfully adjusted to {arabicMilkMeters.Length}.");
-            }
-            else
-            {
-                englishMilkMeters = adjustedMilkMeters.ToArray();
-                Debug.Log($"✅ English milk meters successfully adjusted to {englishMilkMeters.Length}.");
-            }
+        if (HangmanAR.activeSelf)
+        {
+            arabicMilkMeters = adjustedMilkMeters.ToArray();
+            Debug.Log($"✅ Arabic milk meters adjusted to {arabicMilkMeters.Length} (last = full milk)");
+        }
+        else
+        {
+            englishMilkMeters = adjustedMilkMeters.ToArray();
+            Debug.Log($"✅ English milk meters adjusted to {englishMilkMeters.Length} (last = full milk)");
         }
     }
+
 
 
 
@@ -701,34 +817,63 @@ public class HangmanManager : MonoBehaviour
     private int remainingArabicTiles = 0;
 
 
+    // ─── Updated Arabic Initialization ──────────────────────────────────────────
     public void InitializeArabicGame()
     {
         remainingArabicTiles = 0;
 
-        List<int> indices = Enumerable.Range(0, arabicTiles.Count).ToList();
-        System.Random rand = new System.Random();
-        indices = indices.OrderBy(i => rand.Next()).ToList();
-
-        for (int i = 0; i < arabicTiles.Count; i++)
-        {
-            var tileData = arabicTiles[indices[i]];
-            bool shouldHide = i < hiddenLetterCount;
-
-            tileData.tileObject.SetActive(!shouldHide);
-
-            if (shouldHide) remainingArabicTiles++;
-        }
-
-        AssignArabicLetterValues();
-        ValidateKeyboardInteraction();
+        // Reset pour visuals
         pourObjectAR.SetActive(false);
+        pourObjectAR.transform.position = originalPourARPosition;
+
         StartingScreen.SetActive(false);
         HangmanAR.SetActive(true);
         HangmanEN.SetActive(false);
         isArabicMode = true;
+        AudioListener.volume = 1f;
 
-        Debug.Log($"🕌 Arabic tiles hidden: {remainingArabicTiles}");
+        AssignArabicLetterValues();
+        ValidateKeyboardInteraction();
+
+        HashSet<char> visibleChars = new HashSet<char>();
+
+        for (int i = 0; i < arabicTiles.Count; i++)
+        {
+            // hide if any of this tile’s letters are in our fixed hide set
+            bool shouldHide = arabicTiles[i]
+                .tileLetters
+                .Any(c => hideLettersAR.Contains(c));
+
+            arabicTiles[i].tileObject.SetActive(!shouldHide);
+
+            if (shouldHide)
+            {
+                remainingArabicTiles++;
+            }
+            else
+            {
+                // collect letters to grey out on keyboard
+                foreach (char c in arabicTiles[i].tileLetters)
+                    visibleChars.Add(c);
+            }
+        }
+
+        // Grey out & disable arabic keys for visible letters
+        foreach (var kv in arabicKeyboardMap)
+        {
+            char keyChar = kv.Key[0];
+            if (visibleChars.Contains(keyChar))
+            {
+                var btn = kv.Value;
+                btn.GetComponent<Image>().color = unhiddenKeyColor;
+                btn.interactable = false;
+            }
+        }
+
+        Debug.Log($"🕌 Arabic hidden tiles: {remainingArabicTiles} / {arabicTiles.Count}");
     }
+
+
 
 
 
@@ -900,6 +1045,80 @@ public class HangmanManager : MonoBehaviour
         }
 
         Debug.Log("✅ All keyboard buttons are now interactable.");
+    }
+
+    [Header("Reaction Timing")]
+    public float kidsResetDelay = 0.75f;
+    public float cowAndPourDelay = 0.1f;
+
+    public void PlayCorrectReaction(bool isArabic)
+    {
+        StartCoroutine(PlayReactionSequence(isArabic));
+    }
+
+    private IEnumerator PlayReactionSequence(bool isArabic)
+    {
+        // 🎭 Kids setup
+        GameObject kidsIdle = isArabic ? arabicIdleKids : englishIdleKids;
+        GameObject kidsHappy = isArabic ? arabicHappyKids : englishHappyKids;
+
+        // 🐄 Cow setup
+        GameObject cowNormal = isArabic ? arabicCowNormal : englishCowNormal;
+        GameObject cowHappy = isArabic ? arabicCowHappy : englishCowHappy;
+
+        // 🥛 Pouring setup
+        GameObject pourObj = isArabic ? pourObjectAR : pourObjectEN;
+        Animator pourAnim = isArabic ? arabicPouringAnimation : englishPouringAnimation;
+
+        // 👦 STEP 1: Show happy kids
+        kidsIdle.SetActive(false);
+        kidsHappy.SetActive(true);
+
+        yield return new WaitForSeconds(kidsResetDelay); // e.g., 0.75f
+
+        kidsHappy.SetActive(false);
+        kidsIdle.SetActive(true);
+
+        yield return new WaitForSeconds(cowAndPourDelay); // e.g., 0.1f
+
+        // 🐄 STEP 2: Cow reacts
+        cowNormal.SetActive(false);
+        cowHappy.SetActive(true);
+
+        // 🥛 STEP 3: Start pour + play milk audio
+        if (pourObj && pourAnim)
+        {
+            pourObj.SetActive(true);
+            pourAnim.SetBool("isPouring", true);
+            pourAnim.Play("pour", 0, 0f);
+
+            // 🟢 Start milk audio at pour start
+            if (milkFillAudio)
+            {
+                if (milkFillAudio.isPlaying) milkFillAudio.Stop();
+                milkFillAudio.Play();
+                Debug.Log("🔊 Milk fill audio started with pour animation.");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ milkFillAudio is not assigned!");
+            }
+
+            float clipLength = pourAnim.runtimeAnimatorController.animationClips
+                .FirstOrDefault(c => c.name == "pour")?.length ?? 1.5f;
+
+            yield return new WaitForSeconds(clipLength);
+
+            pourAnim.SetBool("isPouring", false);
+            pourObj.SetActive(false);
+
+            // Reset cow to neutral
+            cowHappy.SetActive(false);
+            cowNormal.SetActive(true);
+
+            // 🧪 Update milk meter
+            StartCoroutine(HandleMilkMeterProgression(0f));
+        }
     }
 
 
