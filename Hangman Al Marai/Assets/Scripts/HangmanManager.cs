@@ -25,9 +25,9 @@ public class HangmanManager : MonoBehaviour
 
     // Letters to hide (fixed, non-duplicate)
     private static readonly HashSet<char> hideLettersEN =
-        new HashSet<char> { 'l', 'k', 't', 'h', 'e', 'v', 'r', 'y', 'w' };
+        new HashSet<char> { 'l', 'k', 't', 'h', 'm', 'v', 'r', 'y', 'w', 's' };
     private static readonly HashSet<char> hideLettersAR =
-        new HashSet<char> { 'ش', 'س', 'ل', 'ح', 'ي' };
+        new HashSet<char> { 'ا', 'ش', 'س', 'ل', 'ح', 'ي' , 'أ' };
 
 
     public List<int> fixedHiddenIndices = new List<int> { 1, 3, 5, 7, 9, 11, 13 }; // Example pattern
@@ -248,6 +248,9 @@ public class HangmanManager : MonoBehaviour
             return;
         }
 
+        // 🔒 Disable interaction immediately
+        pressedButton.interactable = false;
+
         char guess = char.ToUpper(letter[0]);
         bool correctGuess = false;
 
@@ -293,7 +296,6 @@ public class HangmanManager : MonoBehaviour
             pressedButton.GetComponent<Image>().color = Color.red;
             incorrectAudio.PlayOneShot(incorrectAudio.clip);
             incorrectAttempts++;
-
             StartCoroutine(IncorrectReactionEnglish());
 
             if (incorrectAttempts >= maxAttempts)
@@ -302,6 +304,7 @@ public class HangmanManager : MonoBehaviour
             }
         }
     }
+
 
 
 
@@ -944,24 +947,18 @@ public class HangmanManager : MonoBehaviour
     {
         Debug.Log($"Pressed Arabic letter: {letter}");
 
-        // 🔸 Validate letter in keyboard map
-        if (!arabicKeyboardMap.ContainsKey(letter))
+        if (!arabicKeyboardMap.TryGetValue(letter, out Button pressedButton) || pressedButton == null)
         {
-            Debug.LogError($"ERROR: Arabic letter '{letter}' not found in dictionary!");
+            Debug.LogError($"ERROR: Arabic letter '{letter}' not found!");
             return;
         }
 
-        Button pressedButton = arabicKeyboardMap[letter];
-        if (pressedButton == null)
-        {
-            Debug.LogError($"ERROR: Arabic button '{letter}' is NULL!");
-            return;
-        }
+        // 🔒 Disable interaction immediately
+        pressedButton.interactable = false;
 
         char guess = letter[0];
         bool correctGuess = false;
 
-        // 🔸 Reveal any tiles that contain this letter
         foreach (var tileData in arabicTiles)
         {
             if (!tileData.tileObject.activeSelf && tileData.tileLetters.Contains(guess))
@@ -973,7 +970,6 @@ public class HangmanManager : MonoBehaviour
             }
         }
 
-        // 🔸 Handle result
         if (correctGuess)
         {
             pressedButton.GetComponent<Image>().color = Color.green;
@@ -995,9 +991,9 @@ public class HangmanManager : MonoBehaviour
         }
         else
         {
-            incorrectAttempts++;
             pressedButton.GetComponent<Image>().color = Color.red;
             incorrectAudio?.PlayOneShot(incorrectAudio.clip);
+            incorrectAttempts++;
             StartCoroutine(IncorrectReactionArabic());
 
             if (incorrectAttempts >= maxAttempts)
@@ -1006,6 +1002,7 @@ public class HangmanManager : MonoBehaviour
             }
         }
     }
+
 
 
 
