@@ -688,6 +688,10 @@ public class HangmanManager : MonoBehaviour
         if (rawImage != null && player.targetTexture != null)
             rawImage.texture = player.targetTexture;
 
+        if (player.targetTexture != null)
+            player.targetTexture.Release();
+
+        Debug.Log($"🎥 Playing {(HangmanAR.activeSelf ? "Arabic" : "English")} win video directly");
 
         // ⏱ Wait for custom duration before win panel
         float delay = HangmanAR.activeSelf ? winVideoDurationAR : winVideoDurationEN;
