@@ -27,7 +27,7 @@ public class HangmanManager : MonoBehaviour
     private static readonly HashSet<char> hideLettersEN =
         new HashSet<char> { 'l', 'k', 't', 'h', 'm', 'v', 'r', 'y', 'w', 's' };
     private static readonly HashSet<char> hideLettersAR =
-        new HashSet<char> { 'ا', 'ش', 'س', 'ل', 'ح', 'ي' , 'أ' };
+        new HashSet<char> { 'ا', 'ش', 'س', 'ل', 'ح', 'ي', 'أ' };
 
 
     public List<int> fixedHiddenIndices = new List<int> { 1, 3, 5, 7, 9, 11, 13 }; // Example pattern
@@ -38,28 +38,33 @@ public class HangmanManager : MonoBehaviour
 
     public Vector3 offScreenPosition = new Vector3(9999, 9999, 0);
 
+    public Image winFadeOverlay;           // Assign a full-screen UI Image (black or white)
+    public float fadeDuration = 2f;        // Control speed of fade-in
+
+    private bool isFadingIn = false;
+    private float fadeTimer = 0f;
 
     public AudioSource milkFillAudio;
-    public GameObject WinPanelAR; 
+    public GameObject WinPanelAR;
 
-    public VideoPlayer videoPlayerEN; 
+    public VideoPlayer videoPlayerEN;
     public GameObject videoScreenEN;
-    public GameObject videoScreenAR; 
+    public GameObject videoScreenAR;
     public int hiddenLetterCount = 7; // Adjustable from Unity Inspector
 
     [Header("Visual Settings")]
     public Color unhiddenKeyColor = Color.gray;
 
-    public bool isArabicMode = false , isEnglishMode = false; 
+    public bool isArabicMode = false, isEnglishMode = false;
 
     // Words to guess
     private string fullSentence = "MilkEverydayIsTheSmartWay"; // Combined sentence (no spaces)
     private char[] displayedWord;
     private int incorrectAttempts = 0;
 
-    public GameObject GameOverPanel, WinPanel; 
+    public GameObject GameOverPanel, WinPanel;
 
-  
+
     private int currentMilkState = 0;
     private int correctGuesses = 0;
     private int totalMissingLetters = 7; // Number of required guesses
@@ -71,7 +76,7 @@ public class HangmanManager : MonoBehaviour
     public Animator arabicPouringAnimation;
 
     // English milk meter and pouring animation
- 
+
     public Animator englishPouringAnimation;
 
     private bool isWinVideoPrepared = false;
@@ -219,7 +224,7 @@ public class HangmanManager : MonoBehaviour
         ValidateKeyboardInteraction();
         isEnglishMode = true;
         InitializeGameVisual();
-       
+
 
     }
 
@@ -420,7 +425,7 @@ public class HangmanManager : MonoBehaviour
 
     // Stop pouring after animation duration
     void StopPouring()
-    { 
+    {
         if (englishPouringAnimation != null)
         {
             Debug.Log("Setting isPouring = false");
@@ -526,10 +531,10 @@ public class HangmanManager : MonoBehaviour
                 StartCoroutine(WinReactionSequenceEnglish()); // English reactions
             }
         }
-      
+
     }
 
-   
+
 
 
 
@@ -645,17 +650,18 @@ public class HangmanManager : MonoBehaviour
 
         float pourDuration = HangmanAR.activeSelf ? milkPourDurationAR : milkPourDurationEN;
 
-        // Optional: trigger animation here if you're using Animator
-        if (HangmanAR.activeSelf)
-            pourObjectAR.GetComponent<Animator>()?.SetTrigger("Pour");
-        else
-            pourObjectEN.GetComponent<Animator>()?.SetTrigger("Pour");
+        // 🥛 Trigger pour animation
+        Animator pourAnimator = HangmanAR.activeSelf ? pourObjectAR.GetComponent<Animator>() : pourObjectEN.GetComponent<Animator>();
+        pourAnimator?.SetTrigger("Pour");
 
         yield return new WaitForSeconds(pourDuration);
 
-        Debug.Log("🥛 Milk pour complete — launching win sequence");
+        Debug.Log("🥛 Pour complete — launching win sequence");
+
+        StartFadeIn(); // ⏱ Start fade after pour completes
         StartCoroutine(HandleWinSequence());
     }
+
 
 
     private IEnumerator HandleWinSequence()
@@ -852,7 +858,7 @@ public class HangmanManager : MonoBehaviour
 
 
 
- 
+
 
 
     public AudioSource endWinAudio;
@@ -899,7 +905,7 @@ public class HangmanManager : MonoBehaviour
     // Arabic Section
 
     public string arabicSentence = "??? ?????? ?? ??????"; // Arabic sentence
-   
+
     public GameObject[] arabicKeyboardButtons; // Arabic keyboard buttons array
 
     public TMP_Text[] arabicSentenceHolders; // Array for sentence segments
@@ -907,7 +913,7 @@ public class HangmanManager : MonoBehaviour
     private char[][] displayedWords; // Multi-array for hiding letters
 
 
-   
+
     public TMP_Text[] arabicLetterSlots; // Arabic text slots
 
     [System.Serializable]
@@ -1216,6 +1222,39 @@ public class HangmanManager : MonoBehaviour
 
             // 🧪 Update milk meter
             StartCoroutine(HandleMilkMeterProgression(0f));
+        }
+    }
+
+
+
+    //Transtion 
+
+    void StartFadeIn()
+    {
+        if (winFadeOverlay != null)
+        {
+            winFadeOverlay.color = new Color(1f, 1f, 1f, 0f); // Pure white, transparent
+            winFadeOverlay.gameObject.SetActive(true);         // Enable overlay
+            isFadingIn = true;
+            fadeTimer = 0f;
+        }
+    }
+
+
+
+    void Update()
+    {
+        if (isFadingIn)
+        {
+            fadeTimer += Time.deltaTime;
+            float alpha = Mathf.Clamp01(fadeTimer / fadeDuration);
+            winFadeOverlay.color = new Color(1f, 1f, 1f, alpha); // White fade
+
+            if (alpha >= 1f)
+            {
+                isFadingIn = false;
+                winFadeOverlay.gameObject.SetActive(false); // Disable after fade completes
+            }
         }
     }
 
