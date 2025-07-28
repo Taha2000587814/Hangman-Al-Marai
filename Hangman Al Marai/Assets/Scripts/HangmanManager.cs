@@ -74,6 +74,8 @@ public class HangmanManager : MonoBehaviour
  
     public Animator englishPouringAnimation;
 
+    private bool isWinVideoPrepared = false;
+
 
     public GameObject arabicCowHappy;
     public GameObject arabicCowAngry;
@@ -450,31 +452,56 @@ public class HangmanManager : MonoBehaviour
             yield break;
         }
 
-     // 🧹 Hide splash and pour visuals
-     (isArabic ? splashObjectAR : splashObjectEN)?.SetActive(false);
+    // 🧹 Hide splash and pour visuals
+    (isArabic ? splashObjectAR : splashObjectEN)?.SetActive(false);
         (isArabic ? pourObjectAR : pourObjectEN)?.SetActive(false);
 
-        // 🥛 Calculate cup index based on correct guesses
-        int cupCount = activeMeter.Length;
-        float fillRatio = Mathf.Clamp01((float)correctGuesses / cupCount); // using assigned cups only
-        int targetIndex = Mathf.Clamp(Mathf.RoundToInt(fillRatio * (cupCount - 1)), 0, cupCount - 1);
+        int totalHiddenLetters = isArabic ? hideLettersAR.Count : hideLettersEN.Count;
+        float fillRatio = Mathf.Clamp01((float)correctGuesses / Mathf.Max(1, totalHiddenLetters));
+        int targetIndex = Mathf.Clamp(Mathf.RoundToInt(fillRatio * (activeMeter.Length - 1)), 0, activeMeter.Length - 1);
 
-        // 🔁 Update meter visuals
-        for (int i = 0; i < cupCount; i++)
+        for (int i = 0; i < activeMeter.Length; i++)
             activeMeter[i].SetActive(i == targetIndex);
 
         currentMilkState = targetIndex;
 
-        Debug.Log($"🥛 Milk meter updated → Cup {currentMilkState + 1}/{cupCount} (Based on correct guesses: {correctGuesses})");
+        Debug.Log($"🥛 Milk meter updated → State {currentMilkState + 1}/{activeMeter.Length} (Correct: {correctGuesses} / Total Hidden: {totalHiddenLetters})");
 
-        if (currentMilkState == cupCount - 1)
-            Debug.Log("✅ Final full cup reached.");
+        if (currentMilkState == activeMeter.Length - 1)
+        {
+            Debug.Log("✅ Final milk state reached — triggering pour animation…");
+            StartCoroutine(TriggerMilkPourAndWin());
+        }
     }
 
 
 
 
 
+    private IEnumerator TriggerMilkPourAndWin()
+    {
+        float pourDuration = HangmanAR.activeSelf ? milkPourDurationAR : milkPourDurationEN;
+
+        // Optional: Activate pour/splash visuals or play an animation
+        GameObject pourObject = HangmanAR.activeSelf ? pourObjectAR : pourObjectEN;
+        if (pourObject != null)
+            pourObject.SetActive(true);
+
+        // Optional: Trigger animator here
+        Animator pourAnimator = pourObject?.GetComponent<Animator>();
+        pourAnimator?.SetTrigger("Pour");
+
+        Debug.Log($"⏳ Waiting {pourDuration}s for milk pour animation…");
+        yield return new WaitForSeconds(pourDuration);
+
+        Debug.Log("🥛 Pour complete — launching win flow.");
+        HandleWin();
+    }
+
+
+    [Header("Win Video Timing")]
+    public float winVideoDurationAR = 4f;
+    public float winVideoDurationEN = 4.5f;
 
 
 
@@ -607,53 +634,125 @@ public class HangmanManager : MonoBehaviour
 
     public void HandleWin()
     {
-        // fire‐and‐forget our sequenced win logic
+        StartCoroutine(WaitForMilkPourThenStartWinSequence());
+    }
+
+    private IEnumerator WaitForMilkPourThenStartWinSequence()
+    {
+        Debug.Log("⏳ Waiting for milk pour animation before win sequence…");
+
+        float pourDuration = HangmanAR.activeSelf ? milkPourDurationAR : milkPourDurationEN;
+
+        // Optional: trigger animation here if you're using Animator
+        if (HangmanAR.activeSelf)
+            pourObjectAR.GetComponent<Animator>()?.SetTrigger("Pour");
+        else
+            pourObjectEN.GetComponent<Animator>()?.SetTrigger("Pour");
+
+        yield return new WaitForSeconds(pourDuration);
+
+        Debug.Log("🥛 Milk pour complete — launching win sequence");
         StartCoroutine(HandleWinSequence());
     }
 
+
     private IEnumerator HandleWinSequence()
     {
-        Debug.Log("Player won! Starting win sequence…");
+        Debug.Log("🏆 Player won! Starting win sequence…");
 
-        // 1) stop all SFX and pause theme
-       // StopAllAudio();
+        // 🎵 Pause theme music
         if (themeAudio != null && themeAudio.isPlaying)
             themeAudio.Pause();
 
-  
-
-        // 3) mute game audio completely
+        // 🔇 Mute all game sounds
         AudioListener.volume = 0f;
 
-        // 4) move pour visuals off-screen
+        // 🧹 Move pour visuals off-screen
         if (HangmanAR.activeSelf)
             pourObjectAR.transform.position = offScreenPosition;
         else
             pourObjectEN.transform.position = offScreenPosition;
 
-        // 5) display & play correct video
+        // 🌍 Select appropriate video and screen
+        VideoPlayer player = HangmanAR.activeSelf ? videoPlayerAR : videoPlayerEN;
+        GameObject screen = HangmanAR.activeSelf ? videoScreenAR : videoScreenEN;
+
+        // 🧼 Clear previous video frame
+        if (player.targetTexture != null)
+            player.targetTexture.Release();
+
+        player.frame = 0;
+        player.time = 0;
+        player.waitForFirstFrame = true;
+
+        // ⏳ Prepare the video
+        player.Prepare();
+        while (!player.isPrepared) yield return null;
+
+        // 🎬 Show screen and play video
+        screen.SetActive(true);
+        player.Play();
+        Debug.Log($"🎥 Playing {(HangmanAR.activeSelf ? "Arabic" : "English")} win video");
+
+        // ⏱ Wait for custom duration before win panel
+        float delay = HangmanAR.activeSelf ? winVideoDurationAR : winVideoDurationEN;
+        yield return new WaitForSeconds(delay);
+
+        player.Pause(); // optional — prevents accidental loop
+
+        // 🏆 Activate correct win panel
         if (HangmanAR.activeSelf)
         {
-            videoScreenAR.SetActive(true);
-            videoPlayerAR.gameObject.SetActive(true);
-            videoPlayerAR.Play();
-            Debug.Log("🎥 Playing Arabic win video");
+            WinPanelAR.SetActive(true);
+            Debug.Log("✅ Arabic win panel activated!");
         }
         else
         {
-            videoScreenEN.SetActive(true);
-            videoPlayerEN.gameObject.SetActive(true);
-            videoPlayerEN.Play();
-            Debug.Log("🎥 Playing English win video");
+            WinPanel.SetActive(true);
+            Debug.Log("✅ English win panel activated!");
         }
 
-        // 6) start panel delay
-        StartCoroutine(ActivateWinPanelAfterDelay());
+        // 🧹 Hide video objects
+        videoPlayerAR.gameObject.SetActive(false);
+        videoScreenAR.SetActive(false);
+        videoPlayerEN.gameObject.SetActive(false);
+        videoScreenEN.SetActive(false);
 
-        // DONE — don’t unpause theme here
-        yield break;
+        // 🔊 Restore audio
+        AudioListener.volume = 1f;
 
+        // 🔔 Play end win audio
+        if (endWinAudio != null && endWinAudio.clip != null)
+        {
+            endWinAudio.volume = 1f;
+            endWinAudio.loop = false;
+            endWinAudio.playOnAwake = false;
+            endWinAudio.spatialBlend = 0f;
+            endWinAudio.outputAudioMixerGroup = null;
+
+            if (!endWinAudio.gameObject.activeSelf)
+                endWinAudio.gameObject.SetActive(true);
+            if (!endWinAudio.enabled)
+                endWinAudio.enabled = true;
+
+            endWinAudio.Stop();
+            endWinAudio.Play();
+
+            Debug.Log($"🔊 Win sound triggered → Clip: {endWinAudio.clip.name}");
+
+            yield return new WaitForSeconds(endWinAudio.clip.length);
+        }
+        else
+        {
+            Debug.LogWarning("❌ End win audio missing or clip not assigned!");
+        }
+
+        // 🎶 Resume theme music
+        if (themeAudio != null) themeAudio.UnPause();
+        Debug.Log("🎶 Theme music resumed — win sequence complete");
     }
+
+
 
     // ─── No changes below this line; helpers still work as before ──────────────
     /*  private void StopAllAudio()
@@ -665,6 +764,9 @@ public class HangmanManager : MonoBehaviour
       } */
 
 
+    [Header("Milk Pour Timing")]
+    public float milkPourDurationAR = 2.5f;
+    public float milkPourDurationEN = 2.5f;
 
 
 
@@ -675,6 +777,10 @@ public class HangmanManager : MonoBehaviour
         // 🎥 Choose video player based on mode
         VideoPlayer player = HangmanAR.activeSelf ? videoPlayerAR : videoPlayerEN;
 
+        // ⏱ Use manually defined duration
+        float duration = HangmanAR.activeSelf ? winVideoDurationAR : winVideoDurationEN;
+        Debug.Log($"⏳ Custom win video display time: {duration} seconds");
+
         // 🔧 Prepare video
         player.Prepare();
         while (!player.isPrepared) yield return null;
@@ -683,10 +789,14 @@ public class HangmanManager : MonoBehaviour
         player.Play();
         Debug.Log("🎬 Win video started");
 
-        // ⏱ Use actual video length
-        float duration = (float)player.length;
-        Debug.Log($"⏳ Waiting for video duration: {duration} seconds");
+        // 🎶 Mute global audio
+        AudioListener.volume = 0f;
+
+        // 🕒 Wait for custom duration instead of full video length
         yield return new WaitForSeconds(duration);
+
+        // 🛑 Pause video (optional, prevents auto-loop or trailing frames)
+        player.Pause();
 
         // 🏆 Show Win Panel
         if (HangmanAR.activeSelf)
@@ -706,10 +816,10 @@ public class HangmanManager : MonoBehaviour
         videoPlayerAR.gameObject.SetActive(false);
         videoScreenAR.SetActive(false);
 
-        
+        // 🔊 Restore global audio
         AudioListener.volume = 1f;
 
-        // 🔔 Super-validated endWinAudio block
+        // 🔔 Play endWinAudio if available
         if (endWinAudio != null && endWinAudio.clip != null)
         {
             endWinAudio.volume = 1f;
@@ -734,15 +844,15 @@ public class HangmanManager : MonoBehaviour
             Debug.LogWarning("❌ endWinAudio missing or clip not assigned!");
         }
 
-        // 🔊 Restore global volume
-        AudioListener.volume = 1f;
+        // 🔁 Resume theme music
         if (themeAudio != null) themeAudio.UnPause();
-
         Debug.Log("🎶 Theme music resumed");
     }
 
 
 
+
+ 
 
 
     public AudioSource endWinAudio;
@@ -752,43 +862,34 @@ public class HangmanManager : MonoBehaviour
 
     void AdjustMilkMeterCount()
     {
-        GameObject[] activeMilkMeters = HangmanAR.activeSelf ? arabicMilkMeters : englishMilkMeters;
-        List<GameObject> adjustedMilkMeters = new List<GameObject>(activeMilkMeters);
-
-        int currentCount = adjustedMilkMeters.Count;
-        int targetCount = hiddenLetterCount;
-
-        GameObject lastMilkMeter = adjustedMilkMeters.Count > 0
-            ? adjustedMilkMeters[adjustedMilkMeters.Count - 1]
-            : null;
-
-        if (lastMilkMeter == null)
-        {
-            Debug.LogError("Milk meter adjustment failed: no base object found!");
-            return;
-        }
-
-        while (adjustedMilkMeters.Count < targetCount)
-        {
-            GameObject duplicate = Instantiate(lastMilkMeter, lastMilkMeter.transform.parent);
-            adjustedMilkMeters.Add(duplicate);
-        }
-
-        // Append final “full milk” state explicitly at the end
-        GameObject fullMilkMeter = Instantiate(lastMilkMeter, lastMilkMeter.transform.parent);
-        adjustedMilkMeters.Add(fullMilkMeter);
-
         if (HangmanAR.activeSelf)
         {
-            arabicMilkMeters = adjustedMilkMeters.ToArray();
-            Debug.Log($"✅ Arabic milk meters adjusted to {arabicMilkMeters.Length} (last = full milk)");
+            hiddenLetterCount = hideLettersAR.Count;
+
+            if (arabicMilkMeters == null || arabicMilkMeters.Length != 7)
+            {
+                Debug.LogWarning($"⚠ Arabic milk meter setup should have 7 states (currently: {arabicMilkMeters?.Length ?? 0})");
+            }
+            else
+            {
+                Debug.Log("✅ Arabic milk meters linked from Inspector — using preassigned states");
+            }
         }
-        else
+        else if (HangmanEN.activeSelf)
         {
-            englishMilkMeters = adjustedMilkMeters.ToArray();
-            Debug.Log($"✅ English milk meters adjusted to {englishMilkMeters.Length} (last = full milk)");
+            hiddenLetterCount = hideLettersEN.Count;
+
+            if (englishMilkMeters == null || englishMilkMeters.Length != 11)
+            {
+                Debug.LogWarning($"⚠ English milk meter setup should have 11 states (currently: {englishMilkMeters?.Length ?? 0})");
+            }
+            else
+            {
+                Debug.Log("✅ English milk meters linked from Inspector — using preassigned states");
+            }
         }
     }
+
 
 
 
