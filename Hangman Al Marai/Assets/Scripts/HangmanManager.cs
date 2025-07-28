@@ -285,13 +285,8 @@ public class HangmanManager : MonoBehaviour
             englishPouringAnimation.Play("pour");
             Invoke("StopPouring", 1.5f);
 
+            // ✅ Win check now centralized
             OnCorrectLetterGuessed();
-
-            if (remainingTiles <= 0)
-            {
-                Debug.Log("🏆 All tiles revealed. Player wins!");
-                HandleWin();
-            }
         }
         else
         {
@@ -306,6 +301,8 @@ public class HangmanManager : MonoBehaviour
             }
         }
     }
+
+
 
 
 
@@ -360,29 +357,36 @@ public class HangmanManager : MonoBehaviour
         Debug.Log("Updated Word Display: " + new string(displayedWord));
     }
 
+    private bool hasStartedWinSequence = false;
+
     void CheckWinCondition()
     {
-        if (HangmanEN.activeSelf) // English mode
+        if (hasStartedWinSequence) return; // 🛑 Prevent duplicate win trigger
+
+        if (HangmanEN.activeSelf)
         {
             if (remainingTiles <= 0)
             {
                 Debug.Log("✅ All tiles revealed! Player wins.");
+                hasStartedWinSequence = true;
                 HandleWin();
                 pourObjectEN.SetActive(false);
             }
         }
-        else if (HangmanAR.activeSelf) // Arabic mode
+        else if (HangmanAR.activeSelf)
         {
             Debug.Log($"🧐 Remaining Arabic hidden tiles: {remainingArabicTiles}");
 
             if (remainingArabicTiles <= 0)
             {
                 Debug.Log("🏆 All Arabic tiles revealed! Player wins.");
+                hasStartedWinSequence = true;
                 HandleWin();
                 pourObjectAR.SetActive(false);
             }
         }
     }
+
 
 
 
@@ -398,17 +402,15 @@ public class HangmanManager : MonoBehaviour
 
         bool isArabic = HangmanAR.activeSelf;
 
-        PlayCorrectReaction(isArabic); // 🔁 Use new reaction system
+        PlayCorrectReaction(isArabic); // 🎬 Unified pour + milk logic
 
-        if (HangmanEN.activeSelf)
-        {
-            if (remainingTiles == 0) CheckWinCondition();
-        }
-        else
-        {
+        // ✅ Both modes now check win centrally
+        if (HangmanEN.activeSelf && remainingTiles == 0)
             CheckWinCondition();
-        }
+        else if (HangmanAR.activeSelf)
+            CheckWinCondition();
     }
+
 
 
 
