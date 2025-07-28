@@ -679,22 +679,15 @@ public class HangmanManager : MonoBehaviour
         VideoPlayer player = HangmanAR.activeSelf ? videoPlayerAR : videoPlayerEN;
         GameObject screen = HangmanAR.activeSelf ? videoScreenAR : videoScreenEN;
 
-        // 🧼 Clear previous video frame
-        if (player.targetTexture != null)
-            player.targetTexture.Release();
-
-        player.frame = 0;
-        player.time = 0;
-        player.waitForFirstFrame = true;
-
-        // ⏳ Prepare the video
-        player.Prepare();
-        while (!player.isPrepared) yield return null;
-
-        // 🎬 Show screen and play video
+        // ✅ Activate both before playback
+        player.gameObject.SetActive(true);
         screen.SetActive(true);
-        player.Play();
-        Debug.Log($"🎥 Playing {(HangmanAR.activeSelf ? "Arabic" : "English")} win video");
+
+        // 🖼 Ensure RawImage is assigned correctly
+        RawImage rawImage = screen.GetComponentInChildren<RawImage>();
+        if (rawImage != null && player.targetTexture != null)
+            rawImage.texture = player.targetTexture;
+
 
         // ⏱ Wait for custom duration before win panel
         float delay = HangmanAR.activeSelf ? winVideoDurationAR : winVideoDurationEN;
@@ -753,6 +746,7 @@ public class HangmanManager : MonoBehaviour
         if (themeAudio != null) themeAudio.UnPause();
         Debug.Log("🎶 Theme music resumed — win sequence complete");
     }
+
 
 
 
