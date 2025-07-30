@@ -38,8 +38,8 @@ public class HangmanManager : MonoBehaviour
 
     public Vector3 offScreenPosition = new Vector3(9999, 9999, 0);
 
-    public Image winFadeOverlay;           // Assign a full-screen UI Image (black or white)
-    public float fadeDuration = 2f;        // Control speed of fade-in
+   // public Image winFadeOverlay;           // Assign a full-screen UI Image (black or white)
+   // public float fadeDuration = 2f;        // Control speed of fade-in
 
     private bool isFadingIn = false;
     private float fadeTimer = 0f;
@@ -280,11 +280,11 @@ public class HangmanManager : MonoBehaviour
 
             StartCoroutine(WinReactionSequenceEnglish());
 
-            englishCowHappy.SetActive(true);
-            englishHappyKids.SetActive(true);
-            englishCowAngry.SetActive(false);
-            englishSadKids.SetActive(false);
-            englishIdleKids.SetActive(false);
+            //englishCowHappy.SetActive(true);
+            //englishHappyKids.SetActive(true);
+            //englishCowAngry.SetActive(false);
+            //englishSadKids.SetActive(false);
+            //englishIdleKids.SetActive(false);
 
             englishPouringAnimation.SetBool("isPouring", true);
             englishPouringAnimation.Play("pour");
@@ -658,7 +658,7 @@ public class HangmanManager : MonoBehaviour
 
         Debug.Log("🥛 Pour complete — launching win sequence");
 
-        StartFadeIn(); // ⏱ Start fade after pour completes
+        StartCoroutine(PlayTransitionOnceThenHide());
         StartCoroutine(HandleWinSequence());
     }
 
@@ -1229,34 +1229,55 @@ public class HangmanManager : MonoBehaviour
 
     //Transtion 
 
-    void StartFadeIn()
-    {
-        if (winFadeOverlay != null)
-        {
-            winFadeOverlay.color = new Color(1f, 1f, 1f, 0f); // Pure white, transparent
-            winFadeOverlay.gameObject.SetActive(true);         // Enable overlay
-            isFadingIn = true;
-            fadeTimer = 0f;
-        }
-    }
-
-
-
+   
     void Update()
     {
-        if (isFadingIn)
-        {
-            fadeTimer += Time.deltaTime;
-            float alpha = Mathf.Clamp01(fadeTimer / fadeDuration);
-            winFadeOverlay.color = new Color(1f, 1f, 1f, alpha); // White fade
-
-            if (alpha >= 1f)
-            {
-                isFadingIn = false;
-                winFadeOverlay.gameObject.SetActive(false); // Disable after fade completes
-            }
-        }
+        
     }
+
+    public VideoPlayer transitionVideoPlayer;
+    public GameObject transitionScreen;
+    public float transitionClipDuration = 1f;
+
+    private IEnumerator PlayTransitionOnceThenHide()
+    {
+        if (transitionVideoPlayer == null || transitionScreen == null)
+        {
+            Debug.LogWarning("⚠ Transition video or screen is not assigned!");
+            yield break;
+        }
+
+        transitionVideoPlayer.Stop(); // 🔁 Reset previous playback
+        transitionVideoPlayer.Prepare(); // ⏳ Let it fully load
+
+        while (!transitionVideoPlayer.isPrepared)
+        {
+            yield return null; // Wait until prepared
+        }
+
+        transitionScreen.SetActive(true);
+        transitionVideoPlayer.gameObject.SetActive(true);
+
+        // 🖼 Ensure texture binding
+        RawImage rawImage = transitionScreen.GetComponentInChildren<RawImage>();
+        if (rawImage != null && transitionVideoPlayer.targetTexture != null)
+        {
+            rawImage.texture = transitionVideoPlayer.targetTexture;
+        }
+
+        transitionVideoPlayer.Play();
+        Debug.Log($"🎥 Transition video prepared & started → Duration: {transitionClipDuration}");
+
+        float adjustedDuration = transitionClipDuration / Mathf.Max(0.01f, transitionVideoPlayer.playbackSpeed);
+        yield return new WaitForSeconds(adjustedDuration);
+
+        transitionVideoPlayer.Stop();
+        transitionScreen.SetActive(false);
+        transitionVideoPlayer.gameObject.SetActive(false);
+
+        Debug.Log("🧹 Transition video cleaned up.");
+    }
+
 
 
 }
