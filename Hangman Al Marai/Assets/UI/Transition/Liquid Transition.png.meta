@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 24e5d6b2ded3bea43ac7ba2acbe0ed14
+guid: 1428908a164968f4eb4558d9f7804666
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -141,337 +141,190 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: image_0
+      name: Liquid Transition_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 776
-        width: 384
-        height: 248
+        y: 690
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: f25fed24b9709b14984a08331434c459
-      internalID: 2108757916
+      spriteID: 10e8533fa8a488e4c8a8f8662b049476
+      internalID: 2063932249
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_1
+      name: Liquid Transition_1
       rect:
         serializedVersion: 2
-        x: 384
-        y: 776
-        width: 384
-        height: 248
+        x: 339
+        y: 690
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 1c3890ba93b04ad4898069bb74cded51
-      internalID: -1309381621
+      spriteID: 900ddcb80da49e6439441bb6fb901b4a
+      internalID: 1716248309
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_2
+      name: Liquid Transition_2
       rect:
         serializedVersion: 2
-        x: 768
-        y: 776
-        width: 384
-        height: 248
+        x: 678
+        y: 690
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 26845368cb0755b4d8a1186c6057314a
-      internalID: 1407025313
+      spriteID: a392fab8a907ad1449ae16ce84644861
+      internalID: -1217333148
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_3
-      rect:
-        serializedVersion: 2
-        x: 1152
-        y: 776
-        width: 384
-        height: 248
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 689f3b82452c0464a95b63723a2bc4a1
-      internalID: 772179467
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: image_4
+      name: Liquid Transition_3
       rect:
         serializedVersion: 2
         x: 0
-        y: 528
-        width: 384
-        height: 248
+        y: 356
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: fa0b806367e97554ca38aabb8ee5e9f8
-      internalID: -180729231
+      spriteID: ad85fcee4071b1543a5842a084387273
+      internalID: -464230319
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_5
+      name: Liquid Transition_4
       rect:
         serializedVersion: 2
-        x: 384
-        y: 528
-        width: 384
-        height: 248
+        x: 339
+        y: 356
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 11fb3c25260472b49b51a25625d68a41
-      internalID: -1097019440
+      spriteID: 7b28e17d619432f4faf965c6fb3fcff6
+      internalID: 1919338657
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_6
+      name: Liquid Transition_5
       rect:
         serializedVersion: 2
-        x: 768
-        y: 528
-        width: 384
-        height: 248
+        x: 678
+        y: 356
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 12864447fb4879f48835a44ce0200c6d
-      internalID: 1162260084
+      spriteID: 83d1e7ba5582dc649b4798ec4b95812f
+      internalID: 2115525732
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_7
-      rect:
-        serializedVersion: 2
-        x: 1152
-        y: 528
-        width: 384
-        height: 248
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 898d5bf795cea284e8be22a0613be9da
-      internalID: 1618136721
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: image_8
+      name: Liquid Transition_6
       rect:
         serializedVersion: 2
         x: 0
-        y: 280
-        width: 384
-        height: 248
+        y: 22
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: d7201a89aab08cf4a89f5c2bc7ed69ad
-      internalID: -1212183611
+      spriteID: ea3e287ae7b6f604491a8f495dc6b662
+      internalID: -1939216967
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_9
+      name: Liquid Transition_7
       rect:
         serializedVersion: 2
-        x: 384
-        y: 280
-        width: 384
-        height: 248
+        x: 339
+        y: 22
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 335036c9b897c6d46b31d7c5df535768
-      internalID: -1799296657
+      spriteID: 14d375e812b6e5f438852bb6b0c3c5c7
+      internalID: -2120202248
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: image_10
+      name: Liquid Transition_8
       rect:
         serializedVersion: 2
-        x: 768
-        y: 280
-        width: 384
-        height: 248
+        x: 678
+        y: 22
+        width: 339
+        height: 334
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 213838835f633a94481d3380b5bb3c2b
-      internalID: 1408225392
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: image_11
-      rect:
-        serializedVersion: 2
-        x: 1152
-        y: 280
-        width: 384
-        height: 248
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: bf0ef868f10902f4db007dd9504705dc
-      internalID: 998118140
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: image_12
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 32
-        width: 384
-        height: 248
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 4dee3c33bfdb727438ee22ae69025036
-      internalID: -2032060186
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: image_13
-      rect:
-        serializedVersion: 2
-        x: 384
-        y: 32
-        width: 384
-        height: 248
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: aa7dde1edf6931842abb7f2189ce4f23
-      internalID: -1202418395
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: image_14
-      rect:
-        serializedVersion: 2
-        x: 768
-        y: 32
-        width: 384
-        height: 248
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 5c1d57806e196954bb5b332313960813
-      internalID: -1905659343
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: image_15
-      rect:
-        serializedVersion: 2
-        x: 1152
-        y: 32
-        width: 384
-        height: 248
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 45117bbbfd938394f9981cb123b33ed1
-      internalID: 1075113970
+      spriteID: 6fb9b4ee5626ee84e99e7a7ca520729d
+      internalID: 1316835479
       vertices: []
       indices: 
       edges: []
@@ -479,7 +332,7 @@ TextureImporter:
     outline: []
     physicsShape: []
     bones: []
-    spriteID: e230c24ceec407641a57d4e528124847
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -487,22 +340,15 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      image_0: 2108757916
-      image_1: -1309381621
-      image_10: 1408225392
-      image_11: 998118140
-      image_12: -2032060186
-      image_13: -1202418395
-      image_14: -1905659343
-      image_15: 1075113970
-      image_2: 1407025313
-      image_3: 772179467
-      image_4: -180729231
-      image_5: -1097019440
-      image_6: 1162260084
-      image_7: 1618136721
-      image_8: -1212183611
-      image_9: -1799296657
+      Liquid Transition_0: 2063932249
+      Liquid Transition_1: 1716248309
+      Liquid Transition_2: -1217333148
+      Liquid Transition_3: -464230319
+      Liquid Transition_4: 1919338657
+      Liquid Transition_5: 2115525732
+      Liquid Transition_6: -1939216967
+      Liquid Transition_7: -2120202248
+      Liquid Transition_8: 1316835479
   spritePackingTag: 
   pSDRemoveMatte: 0
   pSDShowRemoveMatteOption: 0
