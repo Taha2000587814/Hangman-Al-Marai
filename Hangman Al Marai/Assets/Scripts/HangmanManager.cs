@@ -729,28 +729,40 @@ public class HangmanManager : MonoBehaviour
         // 🔔 Play end win audio
         if (endWinAudio != null && endWinAudio.clip != null)
         {
-            endWinAudio.volume = 1f;
-            endWinAudio.loop = false;
-            endWinAudio.playOnAwake = false;
-            endWinAudio.spatialBlend = 0f;
-            endWinAudio.outputAudioMixerGroup = null;
+            // Avoid replaying too quickly in overlapping coroutines
+            float clipLength = endWinAudio.clip.length;
 
-            if (!endWinAudio.gameObject.activeSelf)
-                endWinAudio.gameObject.SetActive(true);
-            if (!endWinAudio.enabled)
-                endWinAudio.enabled = true;
+            if (!endWinAudio.isPlaying)
+            {
+                endWinAudio.volume = 1f;
+                endWinAudio.loop = false;
+                endWinAudio.playOnAwake = false;
+                endWinAudio.spatialBlend = 0f;
+                endWinAudio.outputAudioMixerGroup = null;
 
-            endWinAudio.Stop();
-            endWinAudio.Play();
+                if (!endWinAudio.gameObject.activeSelf)
+                    endWinAudio.gameObject.SetActive(true);
+                if (!endWinAudio.enabled)
+                    endWinAudio.enabled = true;
 
-            Debug.Log($"🔊 Win sound triggered → Clip: {endWinAudio.clip.name}");
+                endWinAudio.Stop();
+               endWinAudio.Play();
 
-            yield return new WaitForSeconds(endWinAudio.clip.length);
+                Debug.Log($"🔊 Win sound triggered → Clip: {endWinAudio.clip.name}");
+
+                yield return new WaitForSeconds(clipLength);
+            }
+            else
+            {
+                Debug.Log($"⏳ Skipped duplicate playback — already playing: {endWinAudio.clip.name}");
+                yield return new WaitForSeconds(clipLength);
+            }
         }
         else
         {
             Debug.LogWarning("❌ End win audio missing or clip not assigned!");
         }
+
 
         // 🎶 Resume theme music
         if (themeAudio != null) themeAudio.UnPause();
@@ -826,29 +838,7 @@ public class HangmanManager : MonoBehaviour
         AudioListener.volume = 1f;
 
         // 🔔 Play endWinAudio if available
-        if (endWinAudio != null && endWinAudio.clip != null)
-        {
-            endWinAudio.volume = 1f;
-            endWinAudio.loop = false;
-            endWinAudio.playOnAwake = false;
-            endWinAudio.spatialBlend = 0f;
-            endWinAudio.outputAudioMixerGroup = null;
-
-            if (!endWinAudio.gameObject.activeSelf)
-                endWinAudio.gameObject.SetActive(true);
-            if (!endWinAudio.enabled)
-                endWinAudio.enabled = true;
-
-            endWinAudio.Stop();
-            endWinAudio.Play();
-
-            Debug.Log($"🔊 endWinAudio triggered → Clip: {endWinAudio.clip.name}, Volume: {endWinAudio.volume}, Active: {endWinAudio.gameObject.activeSelf}, Enabled: {endWinAudio.enabled}");
-            yield return new WaitForSeconds(endWinAudio.clip.length);
-        }
-        else
-        {
-            Debug.LogWarning("❌ endWinAudio missing or clip not assigned!");
-        }
+       
 
         // 🔁 Resume theme music
         if (themeAudio != null) themeAudio.UnPause();
@@ -1278,6 +1268,28 @@ public class HangmanManager : MonoBehaviour
         Debug.Log("🧹 Transition video cleaned up.");
     }
 
+    private bool hasPlayedEndWinAudio = false; // Add at top
+
+    void PlayEndWinAudioOnce()
+    {
+        if (hasPlayedEndWinAudio || endWinAudio == null || endWinAudio.clip == null)
+            return;
+
+        hasPlayedEndWinAudio = true;
+        endWinAudio.volume = 1f;
+        endWinAudio.loop = false;
+        endWinAudio.playOnAwake = false;
+        endWinAudio.spatialBlend = 0f;
+        endWinAudio.outputAudioMixerGroup = null;
+
+        if (!endWinAudio.gameObject.activeSelf) endWinAudio.gameObject.SetActive(true);
+        if (!endWinAudio.enabled) endWinAudio.enabled = true;
+
+        endWinAudio.Stop();
+        endWinAudio.Play();
+
+        Debug.Log($"🔊 Played End Win Audio → {endWinAudio.clip.name}");
+    }
 
 
 }
