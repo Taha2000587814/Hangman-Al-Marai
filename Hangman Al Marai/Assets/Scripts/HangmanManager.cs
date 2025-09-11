@@ -22,6 +22,7 @@ public class HangmanManager : MonoBehaviour
     [Header("Audio Settings")]
     public AudioSource themeAudio;    // Assign your background/theme music here
     public AudioSource winAudio;      // Assign a one-shot win jingle here
+    public AudioSource SongAudio;
 
     // Letters to hide (fixed, non-duplicate)
     private static readonly HashSet<char> hideLettersEN =
@@ -134,7 +135,8 @@ public class HangmanManager : MonoBehaviour
         HangmanEN.SetActive(true);
         HangmanAR.SetActive(false);
         isEnglishMode = true;
-
+        if (themeAudio != null) themeAudio.UnPause();
+        if (SongAudio != null) SongAudio.Stop();
         // Reset pour visuals
         pourObjectEN.SetActive(false);
         pourObjectEN.transform.position = originalPourENPosition;
@@ -224,6 +226,9 @@ public class HangmanManager : MonoBehaviour
         ValidateKeyboardInteraction();
         isEnglishMode = true;
         InitializeGameVisual();
+
+        if (themeAudio != null) themeAudio.UnPause();
+        if (SongAudio != null) SongAudio.Stop();
 
 
     }
@@ -765,7 +770,8 @@ public class HangmanManager : MonoBehaviour
 
 
         // 🎶 Resume theme music
-        if (themeAudio != null) themeAudio.UnPause();
+        SongAudio.Play(); 
+       // if (themeAudio != null) themeAudio.UnPause();
         Debug.Log("🎶 Theme music resumed — win sequence complete");
     }
 
@@ -934,6 +940,9 @@ public class HangmanManager : MonoBehaviour
 
         AssignArabicLetterValues();
         ValidateKeyboardInteraction();
+
+        if (themeAudio != null) themeAudio.UnPause();
+        if (SongAudio != null) SongAudio.Stop();
 
         HashSet<char> visibleChars = new HashSet<char>();
 
